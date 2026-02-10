@@ -53,62 +53,45 @@
 
         <section id="auth-screen" class="fade-in py-10">
             <div class="text-center mb-8">
-                <p class="text-ritual-accent italic text-lg mb-2">Descubre tu momento de paz</p>
                 <h2 class="text-3xl font-serif text-ritual-dark">Bienvenida</h2>
             </div>
-
             <div class="bg-white p-6 rounded-lg shadow-xl profile-card">
-                <input type="email" id="email" placeholder="Correo electrónico" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
-                <input type="password" id="password" placeholder="Contraseña" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
-                
-                <button onclick="login()" class="w-full gold-btn font-bold py-3 mb-3 shadow-md">INICIAR SESIÓN</button>
-                
-                <div class="relative flex py-2 items-center">
-                    <div class="flex-grow border-t border-gray-300"></div>
-                    <span class="flex-shrink mx-4 text-gray-400 text-xs uppercase font-bold">O</span>
-                    <div class="flex-grow border-t border-gray-300"></div>
-                </div>
-
-                <button onclick="loginGoogle()" class="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded mb-3 hover:bg-gray-50 flex justify-center items-center gap-2 transition">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5">
-                    <span>Entrar con Google</span>
+                <input type="email" id="email" placeholder="Correo" class="w-full p-3 mb-4 border rounded">
+                <input type="password" id="password" placeholder="Contraseña" class="w-full p-3 mb-4 border rounded">
+                <button onclick="login()" class="w-full gold-btn font-bold py-3 mb-3">INICIAR SESIÓN</button>
+                <button onclick="loginGoogle()" class="w-full bg-white border p-3 rounded mb-3 flex justify-center items-center gap-2">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5"> Entrar con Google
                 </button>
-
-                <button onclick="registro()" class="w-full bg-white text-ritual-accent border border-ritual-accent py-3 rounded hover:bg-gray-100">Crear Cuenta</button>
+                <button onclick="registro()" class="w-full text-ritual-accent text-sm underline">Crear Cuenta Nueva</button>
                 <p id="auth-error" class="text-red-500 text-center mt-3 text-sm"></p>
             </div>
         </section>
 
         <section id="name-setup" class="hidden fade-in py-10">
             <div class="bg-white p-6 rounded-lg shadow-xl profile-card text-center">
-                <i class="fas fa-user-circle text-ritual-gold text-5xl mb-4"></i>
-                <h2 class="text-xl font-serif mb-2">¡Casi listo!</h2>
-                <p class="text-gray-600 mb-6 text-sm">Dinos tu nombre completo para MJ</p>
-                <input type="text" id="new-display-name" placeholder="Tu nombre y apellidos" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold text-center">
-                <button onclick="guardarNombrePerfil()" class="w-full gold-btn font-bold py-3">GUARDAR Y CONTINUAR</button>
+                <h2 class="text-xl font-serif mb-4">¡Dinos tu nombre!</h2>
+                <input type="text" id="new-display-name" placeholder="Nombre completo" class="w-full p-3 mb-4 border rounded text-center">
+                <button onclick="guardarNombrePerfil()" class="w-full gold-btn font-bold py-3">GUARDAR Y ENTRAR</button>
             </div>
         </section>
 
         <section id="client-panel" class="hidden fade-in">
             <h2 class="text-2xl font-serif text-ritual-dark mb-4">Hola, <span id="client-welcome-name"></span></h2>
-            
             <div class="bg-white p-5 rounded-lg shadow-md mb-6">
-                <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-calendar-plus"></i> Reservar Cita</h3>
+                <h3 class="text-lg font-bold text-ritual-gold mb-3">Reservar Cita</h3>
                 <input type="datetime-local" id="fechaSolicitud" class="w-full p-2 border rounded mb-3">
-                <textarea id="notaCliente" placeholder="¿Qué necesitas?" class="w-full p-2 border rounded mb-3"></textarea>
-                <button onclick="solicitarCita()" class="w-full gold-btn py-2 rounded font-bold">Enviar Solicitud</button>
+                <textarea id="notaCliente" placeholder="¿Qué masaje quieres?" class="w-full p-2 border rounded mb-3"></textarea>
+                <button onclick="solicitarCita()" class="w-full gold-btn py-2 font-bold">Enviar Solicitud</button>
             </div>
-
             <div class="bg-white p-5 rounded-lg shadow-md mb-6">
-                <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-calendar-check"></i> Mis Citas</h3>
-                <div id="lista-mis-citas" class="space-y-3 text-sm"></div>
+                <h3 class="text-lg font-bold text-ritual-gold mb-3">Mis Citas</h3>
+                <div id="lista-mis-citas" class="space-y-3"></div>
             </div>
-
             <div class="bg-white p-5 rounded-lg shadow-md">
-                <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-comments"></i> Chat con MJ</h3>
+                <h3 class="text-lg font-bold text-ritual-gold mb-3">Chat con MJ</h3>
                 <div id="chat-box-client" class="h-48 overflow-y-auto bg-gray-50 p-3 mb-3 border rounded text-sm flex flex-col gap-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="msg-client" placeholder="Escribe un mensaje..." class="flex-grow p-2 border rounded">
+                    <input type="text" id="msg-client" class="flex-grow p-2 border rounded">
                     <button onclick="enviarMensajeCliente()" class="bg-ritual-dark text-white px-4 rounded"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -116,27 +99,30 @@
 
         <section id="admin-panel" class="hidden fade-in">
             <div class="bg-ritual-gold text-white p-4 rounded-lg shadow-md mb-6 text-center">
-                <h2 class="text-xl font-bold font-serif">Panel de Gestión - MJ</h2>
+                <h2 class="text-xl font-serif">Panel de MJ</h2>
             </div>
 
             <div class="bg-white p-5 rounded-lg shadow-md mb-6 border-l-4 border-orange-400">
-                <h3 class="text-lg font-bold text-gray-800 mb-3">🔔 Nuevas Solicitudes</h3>
+                <h3 class="font-bold mb-3">🔔 Solicitudes</h3>
                 <div id="lista-solicitudes" class="space-y-3"></div>
             </div>
 
             <div class="bg-white p-5 rounded-lg shadow-md mb-6 border-l-4 border-green-500">
-                <h3 class="text-lg font-bold text-gray-800 mb-3">📅 Agenda Confirmada</h3>
+                <h3 class="font-bold mb-3">📅 Agenda Confirmada</h3>
                 <div id="lista-todas-citas" class="space-y-3"></div>
             </div>
 
+            <div class="bg-ritual-dark text-white p-5 rounded-lg shadow-md mb-6">
+                <h3 class="font-bold mb-3 text-ritual-gold"><i class="fas fa-history"></i> Historial de Masajes</h3>
+                <div id="lista-historial" class="space-y-2 text-sm max-h-60 overflow-y-auto"></div>
+            </div>
+
             <div class="bg-white p-5 rounded-lg shadow-md border-l-4 border-blue-500">
-                <h3 class="text-lg font-bold text-gray-800 mb-3">💬 Chats de Clientes</h3>
-                <select id="select-chat-user" onchange="cargarChatAdmin()" class="w-full p-2 border rounded mb-3 bg-gray-50">
-                    <option value="">Selecciona un cliente...</option>
-                </select>
+                <h3 class="font-bold mb-3">💬 Chats</h3>
+                <select id="select-chat-user" onchange="cargarChatAdmin()" class="w-full p-2 border mb-3"></select>
                 <div id="chat-box-admin" class="h-48 overflow-y-auto bg-gray-50 p-3 mb-3 border rounded text-sm flex flex-col gap-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="msg-admin" placeholder="Responder..." class="flex-grow p-2 border rounded">
+                    <input type="text" id="msg-admin" class="flex-grow p-2 border rounded">
                     <button onclick="enviarMensajeAdmin()" class="bg-ritual-dark text-white px-4 rounded"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -144,14 +130,12 @@
 
     </main>
 
-    <footer class="bg-ritual-dark text-ritual-gold text-center p-4 mt-8 text-sm">
-        <p>&copy; 2024 Masajes MJ. Todos los derechos reservados.</p>
-    </footer>
+    <footer class="text-center p-4 text-xs text-gray-500">© 2024 Masajes MJ</footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAIqduek2X9EaRbGlojrcHvxupiU4oPQcw",
@@ -165,8 +149,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const ADMIN_EMAIL = "mjll5@masajesmj.com"; 
-
+        const ADMIN_EMAIL = "mjll5@masajesmj.com";
         let currentUser = null;
         let selectedChatUserId = null;
         const sound = document.getElementById('notif-sound');
@@ -178,7 +161,6 @@
                 document.getElementById('btnLogout').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = user.displayName || user.email;
                 
-                // Si no tiene nombre (y no es el admin), pedimos nombre
                 if (!user.displayName && user.email !== ADMIN_EMAIL) {
                     document.getElementById('name-setup').classList.remove('hidden');
                     document.getElementById('client-panel').classList.add('hidden');
@@ -190,16 +172,14 @@
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('client-panel').classList.add('hidden');
                 document.getElementById('admin-panel').classList.add('hidden');
-                document.getElementById('name-setup').classList.add('hidden');
                 document.getElementById('btnLogout').classList.add('hidden');
             }
         });
 
-        // AUTH
         window.login = async () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
-            try { await signInWithEmailAndPassword(auth, e, p); } catch (error) { document.getElementById('auth-error').innerText = error.message; }
+            try { await signInWithEmailAndPassword(auth, e, p); } catch (error) { document.getElementById('auth-error').innerText = "Datos incorrectos"; }
         }
 
         window.registro = async () => {
@@ -209,22 +189,119 @@
         }
 
         window.loginGoogle = async () => {
-            const provider = new GoogleAuthProvider();
-            try { await signInWithPopup(auth, provider); } catch (error) { alert("Error Google: " + error.message); }
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (error) { alert("Error con Google"); }
         }
 
         window.guardarNombrePerfil = async () => {
-            const nuevoNombre = document.getElementById('new-display-name').value;
-            if (!nuevoNombre) return alert("Por favor, introduce tu nombre real.");
-            try {
-                await updateProfile(auth.currentUser, { displayName: nuevoNombre });
-                location.reload(); // Recargamos para aplicar cambios
-            } catch (error) { alert(error.message); }
+            const n = document.getElementById('new-display-name').value;
+            if (!n) return alert("Pon tu nombre");
+            await updateProfile(auth.currentUser, { displayName: n });
+            location.reload();
         }
 
         window.cerrarSesion = () => signOut(auth);
 
-        // CHAT (Optimizado)
+        // --- FUNCIONES ADMIN ---
+        function mostrarAdminPanel() {
+            document.getElementById('admin-panel').classList.remove('hidden');
+
+            // Solicitudes
+            onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
+                const div = document.getElementById('lista-solicitudes');
+                div.innerHTML = snap.empty ? "<p class='text-xs text-gray-400'>No hay pendientes</p>" : "";
+                snap.forEach(dSnap => {
+                    const d = dSnap.data();
+                    div.innerHTML += `<div class="p-3 border rounded text-sm">
+                        <p><strong>${d.userName}</strong></p>
+                        <p class="text-xs">${new Date(d.fecha).toLocaleString()}</p>
+                        <div class="mt-2 flex gap-2">
+                            <button onclick="gestionarCita('${dSnap.id}', 'confirmada')" class="bg-green-500 text-white px-2 py-1 rounded">✓</button>
+                            <button onclick="cancelarCita('${dSnap.id}')" class="bg-red-500 text-white px-2 py-1 rounded">✕</button>
+                        </div>
+                    </div>`;
+                });
+            });
+
+            // Agenda Confirmada
+            onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
+                const div = document.getElementById('lista-todas-citas');
+                div.innerHTML = "";
+                snap.forEach(dSnap => {
+                    const d = dSnap.data();
+                    div.innerHTML += `<div class="p-3 border rounded text-sm bg-green-50 flex justify-between items-center shadow-sm">
+                        <div>
+                            <p><strong>${d.userName}</strong></p>
+                            <p class="text-xs">${new Date(d.fecha).toLocaleString()}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="terminarMasaje('${dSnap.id}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs">TERMINAR</button>
+                            <button onclick="cancelarCita('${dSnap.id}')" class="bg-red-400 text-white px-3 py-1 rounded text-xs">CANCELAR</button>
+                        </div>
+                    </div>`;
+                });
+            });
+
+            // ESCUCHA DEL HISTORIAL
+            onSnapshot(collection(db, "historial"), (snap) => {
+                const div = document.getElementById('lista-historial');
+                div.innerHTML = snap.empty ? "<p class='text-xs italic'>Historial vacío</p>" : "";
+                snap.forEach(dSnap => {
+                    const d = dSnap.data();
+                    div.innerHTML += `<div class="border-b border-gray-700 py-1 flex justify-between items-center">
+                        <span>${d.userName} - ${new Date(d.fechaFinalizacion).toLocaleDateString()}</span>
+                        <button onclick="borrarHistorial('${dSnap.id}')" class="text-red-400 text-[10px]">BORRAR</button>
+                    </div>`;
+                });
+            });
+
+            cargarListaUsuariosChat();
+        }
+
+        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); }
+        window.cancelarCita = async (id) => { if(confirm("¿Borrar cita?")) await deleteDoc(doc(db, "citas", id)); }
+        window.borrarHistorial = async (id) => { if(confirm("¿Borrar del historial?")) await deleteDoc(doc(db, "historial", id)); }
+
+        // MOVER A HISTORIAL
+        window.terminarMasaje = async (id) => {
+            if(!confirm("¿Masaje terminado? Se guardará en el historial.")) return;
+            const citaRef = doc(db, "citas", id);
+            const citaSnap = await getDoc(citaRef);
+            if (citaSnap.exists()) {
+                const datos = citaSnap.data();
+                await addDoc(collection(db, "historial"), {
+                    ...datos,
+                    fechaFinalizacion: new Date().toISOString()
+                });
+                await deleteDoc(citaRef);
+            }
+        }
+
+        // --- CLIENTE ---
+        function mostrarClientPanel(user) {
+            document.getElementById('client-panel').classList.remove('hidden');
+            document.getElementById('client-welcome-name').innerText = user.displayName;
+            onSnapshot(query(collection(db, "citas"), where("userId", "==", user.uid)), (snap) => {
+                const div = document.getElementById('lista-mis-citas');
+                div.innerHTML = "";
+                snap.forEach(dSnap => {
+                    const d = dSnap.data();
+                    div.innerHTML += `<div class="p-3 border rounded text-xs flex justify-between bg-white">
+                        <span>📅 ${new Date(d.fecha).toLocaleString()}</span>
+                        <span class="font-bold uppercase">${d.estado}</span>
+                    </div>`;
+                });
+            });
+            cargarChat(user.uid, 'chat-box-client');
+        }
+
+        window.solicitarCita = async () => {
+            const f = document.getElementById('fechaSolicitud').value;
+            if(!f) return alert("Elige fecha");
+            await addDoc(collection(db, "citas"), { userId: currentUser.uid, userName: currentUser.displayName, fecha: f, estado: "pendiente" });
+            alert("Enviado");
+        }
+
+        // --- CHAT ---
         function cargarChat(chatUid, containerId) {
             const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid));
             onSnapshot(q, (snapshot) => {
@@ -239,9 +316,7 @@
                     div.innerHTML += `<div class="px-3 py-1 rounded-lg max-w-[85%] ${bg}">${d.texto}</div>`;
                 });
                 div.scrollTop = div.scrollHeight;
-                if (snapshot.docChanges().some(c => c.type === "added" && c.doc.data().emisorId !== currentUser.uid)) {
-                    sound.play().catch(() => {});
-                }
+                if (snapshot.docChanges().some(c => c.type === "added" && c.doc.data().emisorId !== currentUser.uid)) { sound.play().catch(()=>{}); }
             });
         }
 
@@ -259,86 +334,11 @@
             document.getElementById('msg-admin').value = "";
         }
 
-        // PANEL ADMIN
-        function mostrarAdminPanel() {
-            document.getElementById('admin-panel').classList.remove('hidden');
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
-                const div = document.getElementById('lista-solicitudes');
-                div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm'>Sin solicitudes.</p>" : "";
-                snap.forEach(docSnap => {
-                    const d = docSnap.data();
-                    div.innerHTML += `<div class="bg-white p-3 border rounded">
-                        <p class="font-bold text-ritual-gold">${d.userName || 'Cliente'}</p>
-                        <p class="text-xs">🗓 ${new Date(d.fecha).toLocaleString()}</p>
-                        <div class="mt-2 flex gap-2">
-                            <button onclick="gestionarCita('${docSnap.id}', 'confirmada')" class="bg-green-500 text-white px-3 py-1 rounded text-xs">Confirmar</button>
-                            <button onclick="eliminarCita('${docSnap.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">Rechazar</button>
-                        </div>
-                    </div>`;
-                });
-            });
-
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
-                const div = document.getElementById('lista-todas-citas');
-                const citas = [];
-                snap.forEach(docSnap => citas.push({id: docSnap.id, ...docSnap.data()}));
-                citas.sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
-                div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm italic'>Agenda libre.</p>" : "";
-                citas.forEach(d => {
-                    div.innerHTML += `
-                    <div class="bg-gray-50 p-3 border-b rounded-md flex flex-col gap-2 shadow-sm">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs text-gray-500">${new Date(d.fecha).toLocaleString()}</span>
-                            <span class="font-bold text-ritual-dark">${d.userName}</span>
-                        </div>
-                        <div class="flex gap-2 justify-end">
-                            <button onclick="eliminarCita('${d.id}')" class="bg-green-600 text-white px-4 py-1 rounded text-[10px] uppercase font-bold">✓ Terminar</button>
-                            <button onclick="eliminarCita('${d.id}')" class="bg-red-400 text-white px-4 py-1 rounded text-[10px] uppercase font-bold">✕ Cancelar</button>
-                        </div>
-                    </div>`;
-                });
-            });
-            cargarListaUsuariosChat();
-        }
-
-        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); }
-        window.eliminarCita = async (id) => { if(confirm("¿Quitar de la agenda?")) await deleteDoc(doc(db, "citas", id)); }
-
-        // PANEL CLIENTE
-        function mostrarClientPanel(user) {
-            document.getElementById('client-panel').classList.remove('hidden');
-            document.getElementById('client-welcome-name').innerText = user.displayName || "Cliente";
-            onSnapshot(query(collection(db, "citas"), where("userId", "==", user.uid)), (snap) => {
-                const div = document.getElementById('lista-mis-citas');
-                div.innerHTML = "";
-                snap.forEach(docSnap => {
-                    const d = docSnap.data();
-                    const color = d.estado === 'confirmada' ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50';
-                    div.innerHTML += `<div class="p-3 rounded border flex justify-between ${color}">
-                        <span>📅 ${new Date(d.fecha).toLocaleString()}</span>
-                        <span class="font-bold uppercase text-[10px]">${d.estado}</span>
-                    </div>`;
-                });
-            });
-            cargarChat(user.uid, 'chat-box-client');
-        }
-
-        window.solicitarCita = async () => {
-            const f = document.getElementById('fechaSolicitud').value;
-            const n = document.getElementById('notaCliente').value;
-            if(!f) return alert("Selecciona fecha");
-            await addDoc(collection(db, "citas"), { userId: currentUser.uid, userName: currentUser.displayName, fecha: f, nota: n, estado: "pendiente", creado: serverTimestamp() });
-            alert("Solicitud enviada.");
-        }
-
         function cargarListaUsuariosChat() {
             onSnapshot(collection(db, "citas"), (snap) => {
                 const select = document.getElementById('select-chat-user');
                 const users = new Map();
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    if(d.userId && d.userName) users.set(d.userId, d.userName);
-                });
+                snap.forEach(doc => { const d = doc.data(); if(d.userId) users.set(d.userId, d.userName); });
                 select.innerHTML = '<option value="">Selecciona cliente...</option>';
                 users.forEach((name, id) => { select.innerHTML += `<option value="${id}">${name}</option>`; });
             });
