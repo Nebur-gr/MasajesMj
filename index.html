@@ -26,12 +26,13 @@
     </script>
     <style>
         body { background-color: #FDFBF7; color: #2C2A29; }
-        .gold-btn { background-color: #C8A165; color: white; transition: 0.3s; }
+        .gold-btn { background-color: #C8A165; color: white; transition: 0.3s; border-radius: 8px; }
         .gold-btn:hover { background-color: #b08d55; }
         .hidden { display: none; }
         .fade-in { animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         #chat-box-client, #chat-box-admin { scroll-behavior: smooth; }
+        .profile-card { border-top: 4px solid #C8A165; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen font-sans">
@@ -56,14 +57,11 @@
                 <h2 class="text-3xl font-serif text-ritual-dark">Bienvenida</h2>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow-xl border-t-4 border-ritual-gold">
-                <div id="register-fields" class="mb-4">
-                    <input type="text" id="reg-name" placeholder="Tu nombre completo" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
-                </div>
+            <div class="bg-white p-6 rounded-lg shadow-xl profile-card">
                 <input type="email" id="email" placeholder="Correo electrónico" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
                 <input type="password" id="password" placeholder="Contraseña" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
                 
-                <button onclick="login()" class="w-full gold-btn font-bold py-3 rounded mb-3 shadow-md">INICIAR SESIÓN</button>
+                <button onclick="login()" class="w-full gold-btn font-bold py-3 mb-3 shadow-md">INICIAR SESIÓN</button>
                 
                 <div class="relative flex py-2 items-center">
                     <div class="flex-grow border-t border-gray-300"></div>
@@ -76,8 +74,18 @@
                     <span>Entrar con Google</span>
                 </button>
 
-                <button onclick="registro()" class="w-full bg-white text-ritual-accent border border-ritual-accent py-3 rounded hover:bg-gray-100">Crear Cuenta con Email</button>
+                <button onclick="registro()" class="w-full bg-white text-ritual-accent border border-ritual-accent py-3 rounded hover:bg-gray-100">Crear Cuenta</button>
                 <p id="auth-error" class="text-red-500 text-center mt-3 text-sm"></p>
+            </div>
+        </section>
+
+        <section id="name-setup" class="hidden fade-in py-10">
+            <div class="bg-white p-6 rounded-lg shadow-xl profile-card text-center">
+                <i class="fas fa-user-circle text-ritual-gold text-5xl mb-4"></i>
+                <h2 class="text-xl font-serif mb-2">¡Casi listo!</h2>
+                <p class="text-gray-600 mb-6 text-sm">Dinos tu nombre completo para MJ</p>
+                <input type="text" id="new-display-name" placeholder="Tu nombre y apellidos" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold text-center">
+                <button onclick="guardarNombrePerfil()" class="w-full gold-btn font-bold py-3">GUARDAR Y CONTINUAR</button>
             </div>
         </section>
 
@@ -169,15 +177,25 @@
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('btnLogout').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = user.displayName || user.email;
-                if (user.email === ADMIN_EMAIL) { mostrarAdminPanel(); } else { mostrarClientPanel(user); }
+                
+                // Si no tiene nombre (y no es el admin), pedimos nombre
+                if (!user.displayName && user.email !== ADMIN_EMAIL) {
+                    document.getElementById('name-setup').classList.remove('hidden');
+                    document.getElementById('client-panel').classList.add('hidden');
+                } else {
+                    document.getElementById('name-setup').classList.add('hidden');
+                    if (user.email === ADMIN_EMAIL) { mostrarAdminPanel(); } else { mostrarClientPanel(user); }
+                }
             } else {
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('client-panel').classList.add('hidden');
                 document.getElementById('admin-panel').classList.add('hidden');
+                document.getElementById('name-setup').classList.add('hidden');
                 document.getElementById('btnLogout').classList.add('hidden');
             }
         });
 
+        // AUTH
         window.login = async () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
@@ -185,15 +203,9 @@
         }
 
         window.registro = async () => {
-            const n = document.getElementById('reg-name').value;
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
-            if(!n) return alert("Pon tu nombre real");
-            try { 
-                const res = await createUserWithEmailAndPassword(auth, e, p);
-                await updateProfile(res.user, { displayName: n });
-                location.reload(); 
-            } catch (error) { document.getElementById('auth-error').innerText = error.message; }
+            try { await createUserWithEmailAndPassword(auth, e, p); } catch (error) { document.getElementById('auth-error').innerText = error.message; }
         }
 
         window.loginGoogle = async () => {
@@ -201,9 +213,18 @@
             try { await signInWithPopup(auth, provider); } catch (error) { alert("Error Google: " + error.message); }
         }
 
+        window.guardarNombrePerfil = async () => {
+            const nuevoNombre = document.getElementById('new-display-name').value;
+            if (!nuevoNombre) return alert("Por favor, introduce tu nombre real.");
+            try {
+                await updateProfile(auth.currentUser, { displayName: nuevoNombre });
+                location.reload(); // Recargamos para aplicar cambios
+            } catch (error) { alert(error.message); }
+        }
+
         window.cerrarSesion = () => signOut(auth);
 
-        // --- CHAT LOGIC ---
+        // CHAT (Optimizado)
         function cargarChat(chatUid, containerId) {
             const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid));
             onSnapshot(q, (snapshot) => {
@@ -238,17 +259,15 @@
             document.getElementById('msg-admin').value = "";
         }
 
-        // --- ADMIN PANEL LOGIC ---
+        // PANEL ADMIN
         function mostrarAdminPanel() {
             document.getElementById('admin-panel').classList.remove('hidden');
-
-            // Solicitudes Pendientes
             onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
                 const div = document.getElementById('lista-solicitudes');
                 div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm'>Sin solicitudes.</p>" : "";
                 snap.forEach(docSnap => {
                     const d = docSnap.data();
-                    div.innerHTML += `<div class="bg-white p-3 border rounded shadow-sm">
+                    div.innerHTML += `<div class="bg-white p-3 border rounded">
                         <p class="font-bold text-ritual-gold">${d.userName || 'Cliente'}</p>
                         <p class="text-xs">🗓 ${new Date(d.fecha).toLocaleString()}</p>
                         <div class="mt-2 flex gap-2">
@@ -259,24 +278,22 @@
                 });
             });
 
-            // Agenda Confirmada con BOTONES TERMINAR/CANCELAR
             onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
                 const div = document.getElementById('lista-todas-citas');
                 const citas = [];
                 snap.forEach(docSnap => citas.push({id: docSnap.id, ...docSnap.data()}));
                 citas.sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
-
-                div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm italic'>No hay citas hoy.</p>" : "";
+                div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm italic'>Agenda libre.</p>" : "";
                 citas.forEach(d => {
                     div.innerHTML += `
-                    <div class="bg-gray-50 p-3 border-b rounded-md flex flex-col gap-2">
+                    <div class="bg-gray-50 p-3 border-b rounded-md flex flex-col gap-2 shadow-sm">
                         <div class="flex justify-between items-center">
                             <span class="text-xs text-gray-500">${new Date(d.fecha).toLocaleString()}</span>
                             <span class="font-bold text-ritual-dark">${d.userName}</span>
                         </div>
                         <div class="flex gap-2 justify-end">
-                            <button onclick="eliminarCita('${d.id}')" class="bg-green-600 text-white px-4 py-1 rounded text-[10px] uppercase font-bold hover:bg-green-700">✓ Terminar</button>
-                            <button onclick="eliminarCita('${d.id}')" class="bg-red-400 text-white px-4 py-1 rounded text-[10px] uppercase font-bold hover:bg-red-500">✕ Cancelar</button>
+                            <button onclick="eliminarCita('${d.id}')" class="bg-green-600 text-white px-4 py-1 rounded text-[10px] uppercase font-bold">✓ Terminar</button>
+                            <button onclick="eliminarCita('${d.id}')" class="bg-red-400 text-white px-4 py-1 rounded text-[10px] uppercase font-bold">✕ Cancelar</button>
                         </div>
                     </div>`;
                 });
@@ -285,14 +302,9 @@
         }
 
         window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); }
+        window.eliminarCita = async (id) => { if(confirm("¿Quitar de la agenda?")) await deleteDoc(doc(db, "citas", id)); }
 
-        // Función para borrar citas (terminadas o canceladas)
-        window.eliminarCita = async (id) => {
-            if(confirm("¿Estás segura de realizar esta acción? La cita se quitará de la lista.")) {
-                await deleteDoc(doc(db, "citas", id));
-            }
-        }
-
+        // PANEL CLIENTE
         function mostrarClientPanel(user) {
             document.getElementById('client-panel').classList.remove('hidden');
             document.getElementById('client-welcome-name').innerText = user.displayName || "Cliente";
@@ -315,7 +327,7 @@
             const f = document.getElementById('fechaSolicitud').value;
             const n = document.getElementById('notaCliente').value;
             if(!f) return alert("Selecciona fecha");
-            await addDoc(collection(db, "citas"), { userId: currentUser.uid, userName: currentUser.displayName || currentUser.email, fecha: f, nota: n, estado: "pendiente", creado: serverTimestamp() });
+            await addDoc(collection(db, "citas"), { userId: currentUser.uid, userName: currentUser.displayName, fecha: f, nota: n, estado: "pendiente", creado: serverTimestamp() });
             alert("Solicitud enviada.");
         }
 
@@ -327,10 +339,8 @@
                     const d = doc.data();
                     if(d.userId && d.userName) users.set(d.userId, d.userName);
                 });
-                select.innerHTML = '<option value="">Selecciona un cliente...</option>';
-                users.forEach((name, id) => {
-                    select.innerHTML += `<option value="${id}">${name}</option>`;
-                });
+                select.innerHTML = '<option value="">Selecciona cliente...</option>';
+                users.forEach((name, id) => { select.innerHTML += `<option value="${id}">${name}</option>`; });
             });
         }
 
