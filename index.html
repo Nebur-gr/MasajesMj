@@ -31,6 +31,7 @@
         .hidden { display: none; }
         .fade-in { animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .msg-new { border-left: 4px solid #C8A165; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen font-sans">
@@ -38,7 +39,10 @@
     <header class="bg-ritual-dark text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-serif tracking-widest text-ritual-gold">MASAJES MJ</h1>
-            <button id="btnLogout" class="hidden text-sm uppercase tracking-wide border border-ritual-gold px-3 py-1 rounded hover:bg-ritual-gold hover:text-white" onclick="cerrarSesion()">Salir</button>
+            <div class="flex items-center gap-4">
+                <span id="user-display-name" class="text-xs italic text-gray-300"></span>
+                <button id="btnLogout" class="hidden text-sm uppercase tracking-wide border border-ritual-gold px-3 py-1 rounded hover:bg-ritual-gold hover:text-white" onclick="cerrarSesion()">Salir</button>
+            </div>
         </div>
     </header>
 
@@ -51,38 +55,50 @@
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow-xl border-t-4 border-ritual-gold">
+                <div id="register-fields" class="mb-4">
+                    <input type="text" id="reg-name" placeholder="Tu nombre completo" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
+                </div>
                 <input type="email" id="email" placeholder="Correo electrónico" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
                 <input type="password" id="password" placeholder="Contraseña" class="w-full p-3 mb-4 border border-gray-300 rounded focus:outline-none focus:border-ritual-gold">
                 
                 <button onclick="login()" class="w-full gold-btn font-bold py-3 rounded mb-3 shadow-md">INICIAR SESIÓN</button>
-                <button onclick="registro()" class="w-full bg-white text-ritual-accent border border-ritual-accent py-3 rounded hover:bg-gray-100">Crear Cuenta Nueva</button>
+                
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink mx-4 text-gray-400 text-xs uppercase font-bold">O</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+
+                <button onclick="loginGoogle()" class="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded mb-3 hover:bg-gray-50 flex justify-center items-center gap-2 transition">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5">
+                    <span>Entrar con Google</span>
+                </button>
+
+                <button onclick="registro()" class="w-full bg-white text-ritual-accent border border-ritual-accent py-3 rounded hover:bg-gray-100">Crear Cuenta con Email</button>
                 <p id="auth-error" class="text-red-500 text-center mt-3 text-sm"></p>
             </div>
-            <p class="text-center text-xs text-gray-400 mt-4">Gestión exclusiva de citas y bienestar.</p>
         </section>
 
         <section id="client-panel" class="hidden fade-in">
-            <h2 class="text-2xl font-serif text-ritual-dark mb-4">Mi Espacio Personal</h2>
+            <h2 class="text-2xl font-serif text-ritual-dark mb-4">Hola, <span id="client-welcome-name"></span></h2>
             
             <div class="bg-white p-5 rounded-lg shadow-md mb-6">
-                <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-calendar-plus"></i> Solicitar Cita</h3>
+                <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-calendar-plus"></i> Reservar Cita</h3>
                 <input type="datetime-local" id="fechaSolicitud" class="w-full p-2 border rounded mb-3">
-                <textarea id="notaCliente" placeholder="¿Qué tipo de masaje necesitas?" class="w-full p-2 border rounded mb-3"></textarea>
+                <textarea id="notaCliente" placeholder="Ej: Masaje descontracturante, 60 min..." class="w-full p-2 border rounded mb-3"></textarea>
                 <button onclick="solicitarCita()" class="w-full gold-btn py-2 rounded font-bold">Enviar Solicitud</button>
             </div>
 
             <div class="bg-white p-5 rounded-lg shadow-md mb-6">
-                <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-calendar-check"></i> Mis Citas Confirmadas</h3>
-                <div id="lista-mis-citas" class="space-y-3 text-sm text-gray-600">
-                    <p class="italic">Cargando tu calendario...</p>
-                </div>
+                <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-calendar-check"></i> Mis Citas</h3>
+                <div id="lista-mis-citas" class="space-y-3 text-sm"></div>
             </div>
 
             <div class="bg-white p-5 rounded-lg shadow-md">
                 <h3 class="text-lg font-bold text-ritual-gold mb-3"><i class="fas fa-comments"></i> Chat con MJ</h3>
-                <div id="chat-box-client" class="h-48 overflow-y-auto bg-gray-50 p-3 mb-3 border rounded text-sm"></div>
+                <div id="chat-box-client" class="h-48 overflow-y-auto bg-gray-50 p-3 mb-3 border rounded text-sm flex flex-col gap-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="msg-client" placeholder="Escribe aquí..." class="flex-grow p-2 border rounded">
+                    <input type="text" id="msg-client" placeholder="Escribe un mensaje..." class="flex-grow p-2 border rounded">
                     <button onclick="enviarMensajeCliente()" class="bg-ritual-dark text-white px-4 rounded"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -90,30 +106,25 @@
 
         <section id="admin-panel" class="hidden fade-in">
             <div class="bg-ritual-gold text-white p-4 rounded-lg shadow-md mb-6 text-center">
-                <h2 class="text-xl font-bold font-serif">Panel de Control - MJ</h2>
-                <p class="text-sm opacity-90">Gestión de Agenda</p>
+                <h2 class="text-xl font-bold font-serif">Panel de Gestión - MJ</h2>
             </div>
 
-            <div class="bg-white p-5 rounded-lg shadow-md mb-6 border-l-4 border-red-400">
-                <h3 class="text-lg font-bold text-gray-800 mb-3">🔔 Solicitudes Pendientes</h3>
-                <div id="lista-solicitudes" class="space-y-3">
-                    <p class="text-gray-400 text-sm">No hay solicitudes nuevas.</p>
-                </div>
+            <div class="bg-white p-5 rounded-lg shadow-md mb-6 border-l-4 border-orange-400">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">🔔 Nuevas Solicitudes</h3>
+                <div id="lista-solicitudes" class="space-y-3"></div>
             </div>
 
             <div class="bg-white p-5 rounded-lg shadow-md mb-6 border-l-4 border-green-500">
-                <h3 class="text-lg font-bold text-gray-800 mb-3">📅 Calendario Confirmado</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-3">📅 Agenda Confirmada</h3>
                 <div id="lista-todas-citas" class="space-y-2"></div>
             </div>
 
             <div class="bg-white p-5 rounded-lg shadow-md border-l-4 border-blue-500">
-                <h3 class="text-lg font-bold text-gray-800 mb-3">💬 Mensajes de Clientes</h3>
-                <select id="select-chat-user" onchange="cargarChatAdmin()" class="w-full p-2 border rounded mb-3 bg-gray-50">
-                    <option value="">Selecciona un cliente para chatear...</option>
-                </select>
-                <div id="chat-box-admin" class="h-48 overflow-y-auto bg-gray-50 p-3 mb-3 border rounded text-sm"></div>
+                <h3 class="text-lg font-bold text-gray-800 mb-3">💬 Chats Activos</h3>
+                <select id="select-chat-user" onchange="cargarChatAdmin()" class="w-full p-2 border rounded mb-3 bg-gray-50"></select>
+                <div id="chat-box-admin" class="h-48 overflow-y-auto bg-gray-50 p-3 mb-3 border rounded text-sm flex flex-col gap-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="msg-admin" placeholder="Respuesta..." class="flex-grow p-2 border rounded">
+                    <input type="text" id="msg-admin" placeholder="Responder..." class="flex-grow p-2 border rounded">
                     <button onclick="enviarMensajeAdmin()" class="bg-ritual-dark text-white px-4 rounded"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -127,10 +138,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN (TUS CLAVES) ---
         const firebaseConfig = {
             apiKey: "AIzaSyAIqduek2X9EaRbGlojrcHvxupiU4oPQcw",
             authDomain: "quiromasaje-mj.firebaseapp.com",
@@ -143,22 +153,18 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        // CORREO DE LA JEFA (IMPORTANTE: Regístrate con este email exacto)
         const ADMIN_EMAIL = "mjll5@masajesmj.com"; 
 
-        // VARIABLES GLOBALES
         let currentUser = null;
         let selectedChatUserId = null;
 
-        // --- 1. GESTIÓN DE PANTALLAS ---
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('btnLogout').classList.remove('hidden');
+                document.getElementById('user-display-name').innerText = user.displayName || user.email;
                 
-                // Redirigir según rol
                 if (user.email === ADMIN_EMAIL) {
                     mostrarAdminPanel();
                 } else {
@@ -169,10 +175,11 @@
                 document.getElementById('client-panel').classList.add('hidden');
                 document.getElementById('admin-panel').classList.add('hidden');
                 document.getElementById('btnLogout').classList.add('hidden');
+                document.getElementById('user-display-name').innerText = "";
             }
         });
 
-        // --- 2. FUNCIONES DE LOGIN / REGISTRO ---
+        // AUTH FUNCTIONS
         window.login = async () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
@@ -181,191 +188,163 @@
         }
 
         window.registro = async () => {
+            const n = document.getElementById('reg-name').value;
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
-            try { await createUserWithEmailAndPassword(auth, e, p); alert("Cuenta creada. ¡Bienvenido!"); } 
-            catch (error) { document.getElementById('auth-error').innerText = "Error al crear: " + error.message; }
+            if(!n) return alert("Por favor, introduce tu nombre");
+            try { 
+                const res = await createUserWithEmailAndPassword(auth, e, p);
+                await updateProfile(res.user, { displayName: n });
+                location.reload(); 
+            } 
+            catch (error) { document.getElementById('auth-error').innerText = error.message; }
+        }
+
+        window.loginGoogle = async () => {
+            const provider = new GoogleAuthProvider();
+            try { await signInWithPopup(auth, provider); } 
+            catch (error) { alert("Error Google: " + error.message); }
         }
 
         window.cerrarSesion = () => signOut(auth);
 
-        // --- 3. LÓGICA DEL CLIENTE ---
+        // CLIENT LOGIC
         function mostrarClientPanel(user) {
             document.getElementById('client-panel').classList.remove('hidden');
+            document.getElementById('client-welcome-name').innerText = user.displayName || "Cliente";
             
-            // Escuchar Mis Citas Confirmadas
-            const q = query(collection(db, "citas"), where("userId", "==", user.uid), where("estado", "==", "confirmada"));
+            const q = query(collection(db, "citas"), where("userId", "==", user.uid));
             onSnapshot(q, (snapshot) => {
                 const div = document.getElementById('lista-mis-citas');
                 div.innerHTML = "";
-                if(snapshot.empty) div.innerHTML = "<p>No tienes citas confirmadas próximas.</p>";
                 snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const fecha = new Date(data.fecha).toLocaleString();
-                    div.innerHTML += `
-                        <div class="bg-green-50 p-3 rounded border border-green-200 flex justify-between">
-                            <span>📅 ${fecha}</span>
-                            <span class="text-green-700 font-bold">Confirmada</span>
-                        </div>`;
+                    const d = doc.data();
+                    const color = d.estado === 'confirmada' ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50';
+                    div.innerHTML += `<div class="p-3 rounded border flex justify-between items-center ${color}">
+                        <span>📅 ${new Date(d.fecha).toLocaleString()}</span>
+                        <span class="font-bold uppercase text-[10px]">${d.estado}</span>
+                    </div>`;
                 });
             });
-
-            // Escuchar Chat Privado
-            cargarChatCliente(user.uid);
+            cargarChat(user.uid, 'chat-box-client');
         }
 
         window.solicitarCita = async () => {
-            const fecha = document.getElementById('fechaSolicitud').value;
-            const nota = document.getElementById('notaCliente').value;
-            if(!fecha) return alert("Selecciona una fecha");
-            
-            try {
-                await addDoc(collection(db, "citas"), {
-                    userId: currentUser.uid,
-                    userEmail: currentUser.email,
-                    fecha: fecha,
-                    nota: nota,
-                    estado: "pendiente",
-                    creado: serverTimestamp()
-                });
-                alert("Solicitud enviada a MJ. Espera confirmación.");
-                document.getElementById('fechaSolicitud').value = "";
-                document.getElementById('notaCliente').value = "";
-            } catch(e) { alert("Error al enviar"); }
+            const f = document.getElementById('fechaSolicitud').value;
+            const n = document.getElementById('notaCliente').value;
+            if(!f) return alert("Elige fecha");
+            await addDoc(collection(db, "citas"), {
+                userId: currentUser.uid,
+                userName: currentUser.displayName || currentUser.email,
+                fecha: f,
+                nota: n,
+                estado: "pendiente",
+                creado: serverTimestamp()
+            });
+            alert("Solicitud enviada.");
         }
 
-        // --- 4. LÓGICA DE LA JEFA (ADMIN) ---
+        // ADMIN LOGIC
         function mostrarAdminPanel() {
             document.getElementById('admin-panel').classList.remove('hidden');
 
-            // Ver Solicitudes Pendientes
-            const qPend = query(collection(db, "citas"), where("estado", "==", "pendiente"));
-            onSnapshot(qPend, (snapshot) => {
+            // Pendientes
+            onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
                 const div = document.getElementById('lista-solicitudes');
-                div.innerHTML = "";
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const fecha = new Date(data.fecha).toLocaleString();
+                div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm'>No hay solicitudes.</p>" : "";
+                snap.forEach(doc => {
+                    const d = doc.data();
                     div.innerHTML += `
                         <div class="bg-white p-3 border rounded shadow-sm">
-                            <p class="font-bold text-ritual-gold">${data.userEmail}</p>
-                            <p class="text-sm">🗓 ${fecha}</p>
-                            <p class="text-xs text-gray-500 italic">"${data.nota || ''}"</p>
+                            <p class="font-bold text-ritual-gold">${d.userName}</p>
+                            <p class="text-xs">🗓 ${new Date(d.fecha).toLocaleString()}</p>
                             <div class="mt-2 flex gap-2">
-                                <button onclick="gestionarCita('${doc.id}', 'confirmada')" class="bg-green-500 text-white px-3 py-1 rounded text-xs">Aceptar</button>
-                                <button onclick="gestionarCita('${doc.id}', 'rechazada')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">Rechazar</button>
+                                <button onclick="gestionarCita('${doc.id}', 'confirmada')" class="bg-green-500 text-white px-3 py-1 rounded text-xs">Confirmar</button>
+                                <button onclick="gestionarCita('${doc.id}', 'rechazada')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">X</button>
                             </div>
                         </div>`;
                 });
             });
 
-            // Ver Calendario Global (Solo confirmadas)
-            const qConf = query(collection(db, "citas"), where("estado", "==", "confirmada"), orderBy("fecha", "asc"));
-            onSnapshot(qConf, (snapshot) => {
+            // Confirmadas con NOMBRE
+            onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada"), orderBy("fecha", "asc")), (snap) => {
                 const div = document.getElementById('lista-todas-citas');
                 div.innerHTML = "";
-                snapshot.forEach(doc => {
-                    const data = doc.data();
+                snap.forEach(doc => {
+                    const d = doc.data();
                     div.innerHTML += `
                         <div class="flex justify-between items-center text-sm border-b py-2">
-                            <span>${new Date(data.fecha).toLocaleString()}</span>
-                            <span class="font-bold text-gray-700">${data.userEmail.split('@')[0]}</span>
+                            <span class="text-gray-500">${new Date(d.fecha).toLocaleString()}</span>
+                            <span class="font-bold">${d.userName}</span>
                         </div>`;
                 });
             });
 
-            // Cargar lista de usuarios para chat
             cargarListaUsuariosChat();
         }
 
-        window.gestionarCita = async (id, nuevoEstado) => {
-            await updateDoc(doc(db, "citas", id), { estado: nuevoEstado });
-        }
+        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); }
 
-        // --- 5. SISTEMA DE CHAT ---
-        
-        // Chat Cliente
-        function cargarChatCliente(uid) {
+        // CHAT SYSTEM
+        function cargarChat(uid, containerId) {
             const q = query(collection(db, "mensajes"), where("chatId", "==", uid), orderBy("timestamp", "asc"));
             onSnapshot(q, (snapshot) => {
-                const div = document.getElementById('chat-box-client');
+                const div = document.getElementById(containerId);
                 div.innerHTML = "";
-                snapshot.forEach(doc => renderMensaje(doc.data(), div));
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const esMio = d.emisorId === currentUser.uid;
+                    const bg = esMio ? "bg-ritual-gold text-white self-end" : "bg-gray-200 text-gray-800 self-start";
+                    div.innerHTML += `<div class="px-3 py-1 rounded-lg max-w-[80%] ${bg}">${d.texto}</div>`;
+                });
                 div.scrollTop = div.scrollHeight;
             });
         }
 
         window.enviarMensajeCliente = async () => {
-            const txt = document.getElementById('msg-client').value;
-            if(!txt) return;
+            const t = document.getElementById('msg-client').value;
+            if(!t) return;
             await addDoc(collection(db, "mensajes"), {
                 chatId: currentUser.uid,
-                emisor: currentUser.email,
-                texto: txt,
+                emisorId: currentUser.uid,
+                emisorNombre: currentUser.displayName,
+                texto: t,
                 timestamp: serverTimestamp()
             });
             document.getElementById('msg-client').value = "";
         }
 
-        // Chat Admin
         function cargarListaUsuariosChat() {
-            // Truco: leer citas para sacar usuarios únicos (forma simple)
-            const q = query(collection(db, "citas")); 
-            onSnapshot(q, (snapshot) => {
+            onSnapshot(collection(db, "citas"), (snap) => {
                 const select = document.getElementById('select-chat-user');
-                const emails = new Set();
-                snapshot.forEach(doc => {
+                const users = new Map();
+                snap.forEach(doc => {
                     const d = doc.data();
-                    if(d.userId && d.userEmail) emails.add(JSON.stringify({uid: d.userId, email: d.userEmail}));
+                    users.set(d.userId, d.userName);
                 });
-                // Limpiar y llenar select
-                select.innerHTML = '<option value="">Selecciona usuario...</option>';
-                emails.forEach(item => {
-                    const u = JSON.parse(item);
-                    const opt = document.createElement('option');
-                    opt.value = u.uid;
-                    opt.innerText = u.email;
-                    select.appendChild(opt);
+                select.innerHTML = '<option value="">Selecciona cliente para chatear...</option>';
+                users.forEach((name, id) => {
+                    select.innerHTML += `<option value="${id}">${name}</option>`;
                 });
             });
         }
 
         window.cargarChatAdmin = () => {
             selectedChatUserId = document.getElementById('select-chat-user').value;
-            if(!selectedChatUserId) return;
-
-            const q = query(collection(db, "mensajes"), where("chatId", "==", selectedChatUserId), orderBy("timestamp", "asc"));
-            onSnapshot(q, (snapshot) => {
-                const div = document.getElementById('chat-box-admin');
-                div.innerHTML = "";
-                snapshot.forEach(doc => renderMensaje(doc.data(), div));
-                div.scrollTop = div.scrollHeight;
-            });
+            if(selectedChatUserId) cargarChat(selectedChatUserId, 'chat-box-admin');
         }
 
         window.enviarMensajeAdmin = async () => {
-            const txt = document.getElementById('msg-admin').value;
-            if(!txt || !selectedChatUserId) return;
+            const t = document.getElementById('msg-admin').value;
+            if(!t || !selectedChatUserId) return;
             await addDoc(collection(db, "mensajes"), {
                 chatId: selectedChatUserId,
-                emisor: "MJ (Admin)",
-                texto: txt,
+                emisorId: currentUser.uid,
+                emisorNombre: "MJ",
+                texto: t,
                 timestamp: serverTimestamp()
             });
             document.getElementById('msg-admin').value = "";
-        }
-
-        function renderMensaje(data, container) {
-            const esMio = data.emisor === currentUser.email || (currentUser.email === ADMIN_EMAIL && data.emisor === "MJ (Admin)");
-            const align = esMio ? "text-right" : "text-left";
-            const bg = esMio ? "bg-ritual-gold text-white" : "bg-gray-200 text-gray-800";
-            
-            container.innerHTML += `
-                <div class="${align} mb-2">
-                    <div class="inline-block px-3 py-1 rounded-lg ${bg} max-w-xs text-sm">
-                        ${data.texto}
-                    </div>
-                </div>`;
         }
 
     </script>
