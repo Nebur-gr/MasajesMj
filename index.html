@@ -169,12 +169,7 @@
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('btnLogout').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = user.displayName || user.email;
-                
-                if (user.email === ADMIN_EMAIL) {
-                    mostrarAdminPanel();
-                } else {
-                    mostrarClientPanel(user);
-                }
+                if (user.email === ADMIN_EMAIL) { mostrarAdminPanel(); } else { mostrarClientPanel(user); }
             } else {
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('client-panel').classList.add('hidden');
@@ -183,12 +178,10 @@
             }
         });
 
-        // AUTH FUNCTIONS
         window.login = async () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
-            try { await signInWithEmailAndPassword(auth, e, p); } 
-            catch (error) { document.getElementById('auth-error').innerText = error.message; }
+            try { await signInWithEmailAndPassword(auth, e, p); } catch (error) { document.getElementById('auth-error').innerText = error.message; }
         }
 
         window.registro = async () => {
@@ -205,150 +198,49 @@
 
         window.loginGoogle = async () => {
             const provider = new GoogleAuthProvider();
-            try { await signInWithPopup(auth, provider); } 
-            catch (error) { alert("Error Google: " + error.message); }
+            try { await signInWithPopup(auth, provider); } catch (error) { alert("Error Google: " + error.message); }
         }
 
         window.cerrarSesion = () => signOut(auth);
 
-        // CHAT LOGIC WITH SOUND
+        // --- CORRECCIÓN CHAT (Sin necesidad de índices manuales) ---
         function cargarChat(chatUid, containerId) {
-            const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid), orderBy("timestamp", "asc"));
+            // Quitamos el orderBy de la consulta para evitar el error de índice de Firebase
+            const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid));
             
             onSnapshot(q, (snapshot) => {
                 const div = document.getElementById(containerId);
+                const msgs = [];
+                snapshot.forEach(doc => msgs.push(doc.data()));
+                
+                // Ordenamos en local por tiempo
+                msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+
                 div.innerHTML = "";
-                let hasNewMessage = false;
-
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                        const d = change.doc.data();
-                        // Suena si el mensaje NO es mío y no es la carga inicial de caché
-                        if (d.emisorId !== currentUser.uid && !snapshot.metadata.fromCache) {
-                            hasNewMessage = true;
-                        }
-                    }
-                });
-
-                if (hasNewMessage) sound.play().catch(() => {});
-
-                snapshot.forEach(doc => {
-                    const d = doc.data();
+                msgs.forEach(d => {
                     const esMio = d.emisorId === currentUser.uid;
                     const bg = esMio ? "bg-ritual-gold text-white self-end" : "bg-gray-200 text-gray-800 self-start";
                     div.innerHTML += `<div class="px-3 py-1 rounded-lg max-w-[85%] ${bg}">${d.texto}</div>`;
                 });
                 div.scrollTop = div.scrollHeight;
+                
+                // Sonido para mensajes nuevos si no son míos
+                if (snapshot.docChanges().some(c => c.type === "added" && c.doc.data().emisorId !== currentUser.uid)) {
+                    sound.play().catch(() => {});
+                }
             });
-        }
-
-        // CLIENT ACTIONS
-        function mostrarClientPanel(user) {
-            document.getElementById('client-panel').classList.remove('hidden');
-            document.getElementById('client-welcome-name').innerText = user.displayName || "Cliente";
-            
-            onSnapshot(query(collection(db, "citas"), where("userId", "==", user.uid)), (snap) => {
-                const div = document.getElementById('lista-mis-citas');
-                div.innerHTML = "";
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    const color = d.estado === 'confirmada' ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50';
-                    div.innerHTML += `<div class="p-3 rounded border flex justify-between ${color}">
-                        <span>📅 ${new Date(d.fecha).toLocaleString()}</span>
-                        <span class="font-bold uppercase text-[10px]">${d.estado}</span>
-                    </div>`;
-                });
-            });
-            cargarChat(user.uid, 'chat-box-client');
-        }
-
-        window.solicitarCita = async () => {
-            const f = document.getElementById('fechaSolicitud').value;
-            const n = document.getElementById('notaCliente').value;
-            if(!f) return alert("Selecciona fecha y hora");
-            await addDoc(collection(db, "citas"), {
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email,
-                fecha: f,
-                nota: n,
-                estado: "pendiente",
-                creado: serverTimestamp()
-            });
-            alert("Solicitud enviada a MJ.");
         }
 
         window.enviarMensajeCliente = async () => {
             const t = document.getElementById('msg-client').value;
             if(!t) return;
-            await addDoc(collection(db, "mensajes"), {
+            const docRef = await addDoc(collection(db, "mensajes"), {
                 chatId: currentUser.uid,
                 emisorId: currentUser.uid,
                 texto: t,
                 timestamp: serverTimestamp()
             });
             document.getElementById('msg-client').value = "";
-        }
-
-        // ADMIN ACTIONS
-        function mostrarAdminPanel() {
-            document.getElementById('admin-panel').classList.remove('hidden');
-
-            // Notificar nuevas citas
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
-                const div = document.getElementById('lista-solicitudes');
-                div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm'>Sin solicitudes.</p>" : "";
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    div.innerHTML += `<div class="bg-white p-3 border rounded">
-                        <p class="font-bold">${d.userName}</p>
-                        <p class="text-xs">🗓 ${new Date(d.fecha).toLocaleString()}</p>
-                        <div class="mt-2 flex gap-2">
-                            <button onclick="gestionarCita('${doc.id}', 'confirmada')" class="bg-green-500 text-white px-3 py-1 rounded text-xs">Confirmar</button>
-                            <button onclick="gestionarCita('${doc.id}', 'rechazada')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">X</button>
-                        </div>
-                    </div>`;
-                });
-            });
-
-            // Agenda confirmada con Nombres
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada"), orderBy("fecha", "asc")), (snap) => {
-                const div = document.getElementById('lista-todas-citas');
-                div.innerHTML = "";
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    div.innerHTML += `<div class="flex justify-between text-sm border-b py-2">
-                        <span>${new Date(d.fecha).toLocaleString()}</span>
-                        <span class="font-bold">${d.userName}</span>
-                    </div>`;
-                });
-            });
-
-            cargarListaUsuariosChat();
-        }
-
-        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); }
-
-        function cargarListaUsuariosChat() {
-            onSnapshot(collection(db, "citas"), (snap) => {
-                const select = document.getElementById('select-chat-user');
-                const users = new Map();
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    users.set(d.userId, d.userName);
-                });
-                select.innerHTML = '<option value="">Selecciona un cliente...</option>';
-                users.forEach((name, id) => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.innerText = name;
-                    select.appendChild(opt);
-                });
-            });
-        }
-
-        window.cargarChatAdmin = () => {
-            selectedChatUserId = document.getElementById('select-chat-user').value;
-            if(selectedChatUserId) cargarChat(selectedChatUserId, 'chat-box-admin');
         }
 
         window.enviarMensajeAdmin = async () => {
@@ -363,6 +255,98 @@
             document.getElementById('msg-admin').value = "";
         }
 
+        // --- CORRECCIÓN PANEL ADMIN Y CITAS ---
+        function mostrarAdminPanel() {
+            document.getElementById('admin-panel').classList.remove('hidden');
+
+            onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
+                const div = document.getElementById('lista-solicitudes');
+                div.innerHTML = snap.empty ? "<p class='text-gray-400 text-sm'>Sin solicitudes.</p>" : "";
+                snap.forEach(docSnap => {
+                    const d = docSnap.data();
+                    div.innerHTML += `<div class="bg-white p-3 border rounded">
+                        <p class="font-bold">${d.userName || d.userEmail || 'Cliente'}</p>
+                        <p class="text-xs">🗓 ${new Date(d.fecha).toLocaleString()}</p>
+                        <div class="mt-2 flex gap-2">
+                            <button onclick="gestionarCita('${docSnap.id}', 'confirmada')" class="bg-green-500 text-white px-3 py-1 rounded text-xs">Confirmar</button>
+                            <button onclick="gestionarCita('${docSnap.id}', 'rechazada')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">X</button>
+                        </div>
+                    </div>`;
+                });
+            });
+
+            // Citas confirmadas visibles y con nombre
+            onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
+                const div = document.getElementById('lista-todas-citas');
+                const citas = [];
+                snap.forEach(d => citas.push(d.data()));
+                citas.sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+
+                div.innerHTML = "";
+                citas.forEach(d => {
+                    div.innerHTML += `<div class="flex justify-between text-sm border-b py-2">
+                        <span>${new Date(d.fecha).toLocaleString()}</span>
+                        <span class="font-bold">${d.userName || 'Cliente'}</span>
+                    </div>`;
+                });
+            });
+            cargarListaUsuariosChat();
+        }
+
+        function mostrarClientPanel(user) {
+            document.getElementById('client-panel').classList.remove('hidden');
+            document.getElementById('client-welcome-name').innerText = user.displayName || "Cliente";
+            onSnapshot(query(collection(db, "citas"), where("userId", "==", user.uid)), (snap) => {
+                const div = document.getElementById('lista-mis-citas');
+                div.innerHTML = "";
+                snap.forEach(docSnap => {
+                    const d = docSnap.data();
+                    const color = d.estado === 'confirmada' ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50';
+                    div.innerHTML += `<div class="p-3 rounded border flex justify-between ${color}">
+                        <span>📅 ${new Date(d.fecha).toLocaleString()}</span>
+                        <span class="font-bold uppercase text-[10px]">${d.estado}</span>
+                    </div>`;
+                });
+            });
+            cargarChat(user.uid, 'chat-box-client');
+        }
+
+        window.solicitarCita = async () => {
+            const f = document.getElementById('fechaSolicitud').value;
+            const n = document.getElementById('notaCliente').value;
+            if(!f) return alert("Selecciona fecha");
+            await addDoc(collection(db, "citas"), {
+                userId: currentUser.uid,
+                userName: currentUser.displayName || currentUser.email,
+                fecha: f,
+                nota: n,
+                estado: "pendiente",
+                creado: serverTimestamp()
+            });
+            alert("Solicitud enviada.");
+        }
+
+        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); }
+
+        function cargarListaUsuariosChat() {
+            onSnapshot(collection(db, "citas"), (snap) => {
+                const select = document.getElementById('select-chat-user');
+                const users = new Map();
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    if(d.userId && d.userName) users.set(d.userId, d.userName);
+                });
+                select.innerHTML = '<option value="">Selecciona un cliente...</option>';
+                users.forEach((name, id) => {
+                    select.innerHTML += `<option value="${id}">${name}</option>`;
+                });
+            });
+        }
+
+        window.cargarChatAdmin = () => {
+            selectedChatUserId = document.getElementById('select-chat-user').value;
+            if(selectedChatUserId) cargarChat(selectedChatUserId, 'chat-box-admin');
+        }
     </script>
 </body>
 </html>
