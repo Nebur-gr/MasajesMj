@@ -146,7 +146,6 @@
             appId: "1:747145274624:web:d1886642fd077d60a63fe5"
         };
 
-        // INICIALIZACIÓN
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -154,10 +153,41 @@
         
         let currentUser = null;
         let selectedChatUserId = null;
-        let adminUnsubscribe = null; // IMPORTANTE: Controla la desconexión del chat
+        let unsubscribeAdminChat = null; // Control para limpiar el chat anterior
         const sound = document.getElementById('notif-sound');
 
-        // DETECTOR DE ESTADO (LOGIN/LOGOUT)
+        // --- ASIGNACIÓN GLOBAL PARA BOTONES ---
+        window.login = async () => {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            if(!e || !p) return alert("Completa los campos");
+            try { 
+                await signInWithEmailAndPassword(auth, e, p); 
+            } catch (error) { 
+                document.getElementById('auth-error').innerText = "Datos incorrectos"; 
+            }
+        };
+
+        window.registro = async () => {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            try { await createUserWithEmailAndPassword(auth, e, p); } catch (error) { document.getElementById('auth-error').innerText = error.message; }
+        };
+
+        window.loginGoogle = async () => {
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (error) { alert("Error con Google"); }
+        };
+
+        window.guardarNombrePerfil = async () => {
+            const n = document.getElementById('new-display-name').value;
+            if (!n) return alert("Pon tu nombre");
+            await updateProfile(auth.currentUser, { displayName: n });
+            location.reload();
+        };
+
+        window.cerrarSesion = () => signOut(auth);
+
+        // --- LÓGICA DE ESTADO ---
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
@@ -167,7 +197,6 @@
                 
                 if (!user.displayName && user.email !== ADMIN_EMAIL) {
                     document.getElementById('name-setup').classList.remove('hidden');
-                    document.getElementById('client-panel').classList.add('hidden');
                 } else {
                     document.getElementById('name-setup').classList.add('hidden');
                     if (user.email === ADMIN_EMAIL) { mostrarAdminPanel(); } else { mostrarClientPanel(user); }
@@ -180,47 +209,10 @@
             }
         });
 
-        // --- FUNCIONES DE ACCESO (LOGIN/REGISTRO) ---
-        window.login = async () => {
-            const e = document.getElementById('email').value;
-            const p = document.getElementById('password').value;
-            try { 
-                await signInWithEmailAndPassword(auth, e, p); 
-            } catch (error) { 
-                console.error(error);
-                document.getElementById('auth-error').innerText = "Datos incorrectos o error de red."; 
-            }
-        }
-
-        window.registro = async () => {
-            const e = document.getElementById('email').value;
-            const p = document.getElementById('password').value;
-            try { 
-                await createUserWithEmailAndPassword(auth, e, p); 
-            } catch (error) { 
-                console.error(error);
-                document.getElementById('auth-error').innerText = error.message; 
-            }
-        }
-
-        window.loginGoogle = async () => {
-            try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (error) { alert("Error con Google"); }
-        }
-
-        window.guardarNombrePerfil = async () => {
-            const n = document.getElementById('new-display-name').value;
-            if (!n) return alert("Pon tu nombre");
-            await updateProfile(auth.currentUser, { displayName: n });
-            location.reload();
-        }
-
-        window.cerrarSesion = () => signOut(auth);
-
         // --- FUNCIONES ADMIN ---
         function mostrarAdminPanel() {
             document.getElementById('admin-panel').classList.remove('hidden');
 
-            // Solicitudes Pendientes
             onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
                 const div = document.getElementById('lista-solicitudes');
                 div.innerHTML = snap.empty ? "<p class='text-xs text-gray-400'>No hay pendientes</p>" : "";
@@ -237,7 +229,6 @@
                 });
             });
 
-            // Agenda Confirmada
             onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
                 const div = document.getElementById('lista-todas-citas');
                 div.innerHTML = "";
@@ -256,7 +247,6 @@
                 });
             });
 
-            // Historial
             onSnapshot(collection(db, "historial"), (snap) => {
                 const div = document.getElementById('lista-historial');
                 div.innerHTML = snap.empty ? "<p class='text-xs italic'>Historial vacío</p>" : "";
@@ -272,31 +262,24 @@
             cargarListaUsuariosChat();
         }
 
-        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); }
-        window.cancelarCita = async (id) => { if(confirm("¿Borrar cita?")) await deleteDoc(doc(db, "citas", id)); }
-        window.borrarHistorial = async (id) => { if(confirm("¿Borrar del historial?")) await deleteDoc(doc(db, "historial", id)); }
+        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); };
+        window.cancelarCita = async (id) => { if(confirm("¿Borrar cita?")) await deleteDoc(doc(db, "citas", id)); };
+        window.borrarHistorial = async (id) => { if(confirm("¿Borrar del historial?")) await deleteDoc(doc(db, "historial", id)); };
 
-        // --- ARREGLO HISTORIAL: MOVER Y BORRAR ---
+        // ARREGLO: PASAR A HISTORIAL Y QUITAR DE AGENDA
         window.terminarMasaje = async (id) => {
             if(!confirm("¿Masaje terminado? Se guardará en el historial.")) return;
-            try {
-                const citaRef = doc(db, "citas", id);
-                const citaSnap = await getDoc(citaRef);
-                if (citaSnap.exists()) {
-                    const datos = citaSnap.data();
-                    // 1. Guardar en historial
-                    await addDoc(collection(db, "historial"), {
-                        ...datos,
-                        fechaFinalizacion: new Date().toISOString()
-                    });
-                    // 2. Borrar de agenda
-                    await deleteDoc(citaRef);
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Error al mover al historial");
+            const citaRef = doc(db, "citas", id);
+            const citaSnap = await getDoc(citaRef);
+            if (citaSnap.exists()) {
+                const datos = citaSnap.data();
+                await addDoc(collection(db, "historial"), {
+                    ...datos,
+                    fechaFinalizacion: new Date().toISOString()
+                });
+                await deleteDoc(citaRef);
             }
-        }
+        };
 
         // --- CLIENTE ---
         function mostrarClientPanel(user) {
@@ -313,7 +296,6 @@
                     </div>`;
                 });
             });
-            // Cargar chat sin guardar unsubscribe (cliente solo tiene 1 chat)
             cargarChat(user.uid, 'chat-box-client');
         }
 
@@ -322,19 +304,16 @@
             if(!f) return alert("Elige fecha");
             await addDoc(collection(db, "citas"), { userId: currentUser.uid, userName: currentUser.displayName, fecha: f, estado: "pendiente" });
             alert("Enviado");
-        }
+        };
 
-        // --- CHAT LÓGICA CORE ---
+        // --- CHAT LÓGICA ---
         function cargarChat(chatUid, containerId) {
             const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid));
-            
-            // Retornamos la función unsubscribe para poder detenerla después
             return onSnapshot(q, (snapshot) => {
                 const div = document.getElementById(containerId);
                 const msgs = [];
                 snapshot.forEach(doc => msgs.push(doc.data()));
                 msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                
                 div.innerHTML = "";
                 msgs.forEach(d => {
                     const esMio = d.emisorId === currentUser.uid;
@@ -342,11 +321,7 @@
                     div.innerHTML += `<div class="px-3 py-1 rounded-lg max-w-[85%] ${bg}">${d.texto}</div>`;
                 });
                 div.scrollTop = div.scrollHeight;
-                
-                // Sonido si hay mensaje nuevo ajeno
-                if (snapshot.docChanges().some(c => c.type === "added" && c.doc.data().emisorId !== currentUser.uid)) { 
-                    sound.play().catch(()=>{}); 
-                }
+                if (snapshot.docChanges().some(c => c.type === "added" && c.doc.data().emisorId !== currentUser.uid)) { sound.play().catch(()=>{}); }
             });
         }
 
@@ -355,46 +330,40 @@
             if(!t) return;
             await addDoc(collection(db, "mensajes"), { chatId: currentUser.uid, emisorId: currentUser.uid, texto: t, timestamp: serverTimestamp() });
             document.getElementById('msg-client').value = "";
-        }
+        };
 
         window.enviarMensajeAdmin = async () => {
             const t = document.getElementById('msg-admin').value;
             if(!t || !selectedChatUserId) return;
             await addDoc(collection(db, "mensajes"), { chatId: selectedChatUserId, emisorId: currentUser.uid, texto: t, timestamp: serverTimestamp() });
             document.getElementById('msg-admin').value = "";
-        }
+        };
 
         function cargarListaUsuariosChat() {
             onSnapshot(collection(db, "citas"), (snap) => {
                 const select = document.getElementById('select-chat-user');
-                // Usamos Map para evitar duplicados si el usuario tiene varias citas
                 const users = new Map();
                 snap.forEach(doc => { const d = doc.data(); if(d.userId) users.set(d.userId, d.userName); });
-                
+                const currentVal = select.value;
                 select.innerHTML = '<option value="">Selecciona cliente...</option>';
-                users.forEach((name, id) => { 
-                    select.innerHTML += `<option value="${id}">${name}</option>`; 
-                });
+                users.forEach((name, id) => { select.innerHTML += `<option value="${id}">${name}</option>`; });
+                select.value = currentVal;
             });
         }
 
-        // --- ARREGLO CHAT ADMIN: CAMBIO DE USUARIO ---
+        // ARREGLO: VISUALIZAR CONVERSACIONES CORRECTAMENTE
         window.cargarChatAdmin = () => {
             selectedChatUserId = document.getElementById('select-chat-user').value;
             
-            // 1. Si había un chat abierto escuchando, lo cerramos
-            if (adminUnsubscribe) {
-                adminUnsubscribe();
-                adminUnsubscribe = null;
-            }
-
-            // 2. Si se seleccionó un usuario, abrimos el nuevo chat y guardamos la referencia para cerrarlo después
+            // Si ya hay un chat abierto, lo cerramos para no duplicar mensajes
+            if (unsubscribeAdminChat) unsubscribeAdminChat();
+            
             if(selectedChatUserId) {
-                adminUnsubscribe = cargarChat(selectedChatUserId, 'chat-box-admin');
+                unsubscribeAdminChat = cargarChat(selectedChatUserId, 'chat-box-admin');
             } else {
-                document.getElementById('chat-box-admin').innerHTML = '';
+                document.getElementById('chat-box-admin').innerHTML = "";
             }
-        }
+        };
     </script>
 </body>
 </html>
