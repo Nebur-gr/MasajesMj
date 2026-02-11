@@ -152,6 +152,7 @@
         const ADMIN_EMAIL = "mjll5@masajesmj.com";
         let currentUser = null;
         let selectedChatUserId = null;
+        let adminUnsubscribe = null; // Variable para controlar la suscripción del chat
         const sound = document.getElementById('notif-sound');
 
         onAuthStateChanged(auth, (user) => {
@@ -261,18 +262,25 @@
         window.cancelarCita = async (id) => { if(confirm("¿Borrar cita?")) await deleteDoc(doc(db, "citas", id)); }
         window.borrarHistorial = async (id) => { if(confirm("¿Borrar del historial?")) await deleteDoc(doc(db, "historial", id)); }
 
-        // MOVER A HISTORIAL
+        // MOVER A HISTORIAL (CORREGIDO)
         window.terminarMasaje = async (id) => {
             if(!confirm("¿Masaje terminado? Se guardará en el historial.")) return;
-            const citaRef = doc(db, "citas", id);
-            const citaSnap = await getDoc(citaRef);
-            if (citaSnap.exists()) {
-                const datos = citaSnap.data();
-                await addDoc(collection(db, "historial"), {
-                    ...datos,
-                    fechaFinalizacion: new Date().toISOString()
-                });
-                await deleteDoc(citaRef);
+            try {
+                const citaRef = doc(db, "citas", id);
+                const citaSnap = await getDoc(citaRef);
+                if (citaSnap.exists()) {
+                    const datos = citaSnap.data();
+                    // Primero añadimos al historial
+                    await addDoc(collection(db, "historial"), {
+                        ...datos,
+                        fechaFinalizacion: new Date().toISOString()
+                    });
+                    // Luego borramos de la agenda
+                    await deleteDoc(citaRef);
+                }
+            } catch (error) {
+                console.error("Error moviendo al historial:", error);
+                alert("Hubo un error al guardar en el historial.");
             }
         }
 
@@ -301,10 +309,11 @@
             alert("Enviado");
         }
 
-        // --- CHAT ---
+        // --- CHAT (CORREGIDO) ---
         function cargarChat(chatUid, containerId) {
             const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid));
-            onSnapshot(q, (snapshot) => {
+            // Devolvemos la función de 'unsubscribe'
+            return onSnapshot(q, (snapshot) => {
                 const div = document.getElementById(containerId);
                 const msgs = [];
                 snapshot.forEach(doc => msgs.push(doc.data()));
@@ -346,9 +355,15 @@
 
         window.cargarChatAdmin = () => {
             selectedChatUserId = document.getElementById('select-chat-user').value;
-            if(selectedChatUserId) cargarChat(selectedChatUserId, 'chat-box-admin');
-        }
-    </script>
-</body>
-    </html>
+            
+            // CORRECCIÓN: Desconectar el chat anterior si existe
+            if (adminUnsubscribe) {
+                adminUnsubscribe();
+                adminUnsubscribe = null;
+            }
 
+            if(selectedChatUserId) {
+                // Guardar la nueva suscripción
+                adminUnsubscribe = cargarChat(selectedChatUserId, 'chat-box-admin');
+            } else {
+                document.getElementById('chat-box-admin')
