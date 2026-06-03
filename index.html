@@ -64,56 +64,85 @@
             </div>
         </section>
 
-        <section id="client-panel" class="hidden">
-            <h2 class="text-xl font-serif mb-4">Hola, <span id="client-welcome-name"></span></h2>
+        <section id="client-panel" class="hidden space-y-6">
+            <h2 class="text-xl font-serif">Hola, <span id="client-welcome-name"></span></h2>
             
-            <div class="bg-white p-5 rounded-lg shadow-md mb-6">
-                <h3 class="font-bold text-ritual-gold mb-3">Solicitar Cita</h3>
-                <input type="datetime-local" id="fechaSolicitud" class="w-full p-2 border rounded mb-3">
+            <div class="bg-white p-5 rounded-lg shadow-md">
+                <h3 class="font-bold text-ritual-gold mb-3 flex items-center gap-2 text-sm">
+                    <i class="fas fa-calendar-alt"></i> Selecciona Fecha y Hora
+                </h3>
+                
+                <div id="calendar-client-container" class="mb-4"></div>
+                
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-500 mb-1">Hora disponible:</label>
+                    <select id="horaSolicitud" class="w-full p-2 border rounded text-sm bg-white">
+                        <!-- Las horas se cargan dinámicamente según disponibilidad -->
+                    </select>
+                </div>
+
                 <textarea id="notaCliente" placeholder="¿Qué masaje deseas o qué zona te duele?" class="w-full p-2 border rounded mb-3 h-20 text-sm"></textarea>
                 <button onclick="solicitarCita()" class="w-full gold-btn py-2">Enviar Solicitud</button>
             </div>
 
-            <div class="mb-6">
-                <h3 class="font-bold mb-2 text-sm">Estado de mis masajes</h3>
+            <div>
+                <h3 class="font-bold mb-2 text-sm text-gray-600">Estado de mis masajes</h3>
                 <div id="lista-mis-citas" class="space-y-2"></div>
             </div>
 
             <div class="bg-white p-4 rounded shadow">
-                <h3 class="font-bold text-xs mb-2">Chat con MJ</h3>
+                <h3 class="font-bold text-xs mb-2 text-ritual-gold">Chat con MJ</h3>
                 <div id="chat-box-client" class="h-40 overflow-y-auto bg-gray-50 p-2 mb-2 border rounded text-xs flex flex-col gap-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="msg-client" class="flex-grow p-2 border rounded text-sm">
+                    <input type="text" id="msg-client" class="flex-grow p-2 border rounded text-sm" placeholder="Escribe un mensaje...">
                     <button onclick="enviarMensajeCliente()" class="bg-ritual-dark text-white px-3 rounded"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         </section>
 
-        <section id="admin-panel" class="hidden">
-            <h2 class="bg-ritual-gold text-white p-3 rounded mb-6 text-center font-serif tracking-widest">AGENDA DE MJ</h2>
+        <section id="admin-panel" class="hidden space-y-6">
+            <h2 class="bg-ritual-gold text-white p-3 rounded text-center font-serif tracking-widest shadow-md">AGENDA DE MJ</h2>
 
-            <div class="mb-8">
+            <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <h3 class="font-bold text-sm text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="fas fa-toggle-on text-ritual-gold"></i> GESTIÓN DE DIAS LIBRES
+                </h3>
+                <p class="text-[11px] text-gray-500 mb-3">Pulsa sobre cualquier día para abrirlo (verde) o cerrarlo por completo (rojo/linea).</p>
+                <div id="calendar-admin-container"></div>
+            </div>
+
+            <div>
                 <h3 class="font-bold text-orange-600 mb-3 flex items-center gap-2 text-sm">🔔 SOLICITUDES NUEVAS</h3>
                 <div id="lista-solicitudes" class="space-y-3"></div>
             </div>
 
-            <div class="mb-8">
-                <h3 class="font-bold text-green-700 mb-3 flex items-center gap-2 text-sm">📅 CITAS PARA HOY</h3>
+            <div>
+                <h3 class="font-bold text-green-700 mb-3 flex items-center gap-2 text-sm">📅 CITAS PLANIFICADAS</h3>
                 <div id="lista-todas-citas" class="space-y-3"></div>
             </div>
 
-            <div class="mb-8">
+            <div>
                 <h3 class="font-bold text-gray-500 mb-3 flex items-center gap-2 text-sm">⌛ HISTORIAL</h3>
                 <div id="lista-historial" class="bg-white rounded p-3 shadow-inner max-h-40 overflow-y-auto space-y-2 text-xs"></div>
             </div>
 
-            <div class="bg-white p-4 rounded shadow-lg border-t-4 border-blue-400">
-                <h3 class="font-bold text-xs mb-2">Mensajes de Clientes</h3>
-                <select id="select-chat-user" onchange="cargarChatAdmin()" class="w-full p-2 border mb-2 text-sm"></select>
-                <div id="chat-box-admin" class="h-40 overflow-y-auto bg-gray-50 p-2 mb-2 border rounded text-xs flex flex-col gap-2"></div>
-                <div class="flex gap-2">
-                    <input type="text" id="msg-admin" class="flex-grow p-2 border rounded text-sm">
-                    <button onclick="enviarMensajeAdmin()" class="bg-ritual-dark text-white px-3 rounded"><i class="fas fa-paper-plane"></i></button>
+            <div class="bg-white rounded shadow-lg border-t-4 border-blue-400 overflow-hidden">
+                <h3 class="font-bold text-xs p-3 bg-gray-50 border-b text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-comments text-blue-500"></i> Centro de Mensajes con Clientes
+                </h3>
+                <div class="grid grid-cols-3 h-64">
+                    <div id="admin-chat-threads" class="col-span-1 border-r overflow-y-auto bg-gray-50 p-2 flex flex-col gap-1">
+                        <p class="text-[10px] text-gray-400 text-center py-4">Cargando chats...</p>
+                    </div>
+                    <div class="col-span-2 flex flex-col p-2 bg-white justify-between">
+                        <div id="chat-box-admin" class="flex-grow h-40 overflow-y-auto bg-gray-50 p-2 mb-2 border rounded text-xs flex flex-col gap-2">
+                            <p class="text-gray-400 text-center my-auto text-[11px]">Selecciona un cliente para conversar</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="msg-admin" class="flex-grow p-2 border rounded text-xs" placeholder="Responder...">
+                            <button onclick="enviarMensajeAdmin()" class="bg-ritual-dark text-white px-3 rounded text-xs"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -122,7 +151,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAIqduek2X9EaRbGlojrcHvxupiU4oPQcw",
@@ -137,9 +166,17 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const ADMIN_EMAIL = "mjll5@masajesmj.com";
+        
         let currentUser = null;
         let selectedChatUserId = null;
         let unsubscribeAdminChat = null;
+        
+        // Estados de los Calendarios
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth();
+        let clientSelectedDate = null;
+        let globalDisponibilidad = {};
+        let globalCitas = [];
 
         // --- ACCESO ---
         window.login = async () => {
@@ -165,7 +202,148 @@
             if (n) { await updateProfile(auth.currentUser, { displayName: n }); location.reload(); }
         };
 
-        // --- ESTADO SESIÓN ---
+        // --- ESCUCHADORES EN TIEMPO REAL REESTRUCTURADOS ---
+        onSnapshot(collection(db, "disponibilidad"), (snap) => {
+            globalDisponibilidad = {};
+            snap.forEach(d => { globalDisponibilidad[d.id] = d.data().estado; });
+            actualizarCalendariosDinamicos();
+        });
+
+        onSnapshot(collection(db, "citas"), (snap) => {
+            globalCitas = [];
+            snap.forEach(d => { globalCitas.push({ id: d.id, ...d.data() }); });
+            actualizarCalendariosDinamicos();
+            
+            if (currentUser) {
+                if (currentUser.email === ADMIN_EMAIL) { renderListasAdmin(); } else { renderListasCliente(); }
+            }
+        });
+
+        function actualizarCalendariosDinamicos() {
+            if (currentUser) {
+                if (currentUser.email === ADMIN_EMAIL) {
+                    renderCalendarUI('calendar-admin-container', true);
+                } else {
+                    renderCalendarUI('calendar-client-container', false);
+                }
+            }
+        }
+
+        // --- CONTROL INTELIGENTE DE HORARIOS OCUPADOS ---
+        window.actualizarHorasDisponibles = (dateStr) => {
+            const select = document.getElementById('horaSolicitud');
+            if (!select) return;
+
+            // Extrae las horas ya confirmadas para este día concreto
+            const horasOcupadas = globalCitas
+                .filter(c => c.fecha && c.fecha.startsWith(dateStr) && c.estado === "confirmada")
+                .map(c => c.fecha.split('T')[1]);
+
+            const horasBase = ["09:00", "10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
+            
+            let html = dateStr ? "" : "<option>Selecciona un día primero</option>";
+            if (dateStr) {
+                horasBase.forEach(h => {
+                    const ocupada = horasOcupadas.includes(h);
+                    html += `<option value="${h}" ${ocupada ? 'disabled class="text-gray-300 bg-gray-100 italic"' : ''}>
+                        ${h} ${ocupada ? ' ➔ (Ocupado)' : ''}
+                    </option>`;
+                });
+            }
+            select.innerHTML = html;
+        };
+
+        // --- MOTOR DEL CALENDARIO INTERACTIVO ---
+        function renderCalendarUI(containerId, isAdmin) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const primerDiaIndex = new Date(calYear, calMonth, 1).getDay();
+            const desfase = primerDiaIndex === 0 ? 6 : primerDiaIndex - 1; 
+            const totalDias = new Date(calYear, calMonth + 1, 0).getDate();
+
+            let html = `
+                <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <button type="button" class="px-2 py-1 bg-white border rounded text-xs font-bold shadow-sm" onclick="window.navegarMes(-1, '${containerId}', ${isAdmin})">&lt;</button>
+                        <span class="text-xs font-serif font-bold text-ritual-dark">${meses[calMonth]} ${calYear}</span>
+                        <button type="button" class="px-2 py-1 bg-white border rounded text-xs font-bold shadow-sm" onclick="window.navegarMes(1, '${containerId}', ${isAdmin})">&gt;</button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 mb-1">
+                        <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1">
+            `;
+
+            for (let i = 0; i < desfase; i++) { html += `<div></div>`; }
+
+            for (let d = 1; d <= totalDias; d++) {
+                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const estadoDia = globalDisponibilidad[dateStr] || "abierto"; 
+                
+                let btnEstilo = "bg-green-50 text-green-800 border border-green-200";
+                if (estadoDia === "cerrado") {
+                    btnEstilo = "bg-red-50 text-red-700 border border-red-200 line-through";
+                }
+
+                if (!isAdmin && dateStr === clientSelectedDate) {
+                    btnEstilo = "bg-ritual-gold text-white font-bold ring-2 ring-offset-1 ring-ritual-gold";
+                }
+
+                // Obtener citas confirmadas de este día para el Panel de MJ
+                let citasHtml = "";
+                if (isAdmin) {
+                    const citasDia = globalCitas.filter(c => c.fecha && c.fecha.startsWith(dateStr) && c.estado === "confirmada");
+                    citasDia.forEach(c => {
+                        const hora = c.fecha.split('T')[1] || '';
+                        citasHtml += `<div class="text-[8px] leading-tight bg-blue-600 text-white rounded px-0.5 mt-0.5 truncate w-full text-left" title="${c.userName}">
+                            ${hora} ${c.userName.split(' ')[0]}
+                        </div>`;
+                    });
+                }
+
+                html += `
+                    <button type="button" onclick="window.eventoClickDia('${dateStr}', ${isAdmin}, '${containerId}')" 
+                        class="p-1 min-h-[48px] flex flex-col justify-between items-center text-[11px] rounded transition ${btnEstilo}">
+                        <span class="font-bold">${d}</span>
+                        <div class="w-full">${citasHtml}</div>
+                    </button>
+                `;
+            }
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        window.navegarMes = (dir, containerId, isAdmin) => {
+            calMonth += dir;
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            renderCalendarUI(containerId, isAdmin);
+        };
+
+        window.eventoClickDia = async (dateStr, isAdmin, containerId) => {
+            if (isAdmin) {
+                try {
+                    const estadoActual = globalDisponibilidad[dateStr] || "abierto";
+                    const nuevoEstado = estadoActual === "abierto" ? "cerrado" : "abierto";
+                    await setDoc(doc(db, "disponibilidad", dateStr), { estado: nuevoEstado });
+                } catch (err) {
+                    alert("Error en Firebase: Comprueba tus Reglas de Escritura de Firestore.");
+                }
+            } else {
+                if (globalDisponibilidad[dateStr] === "cerrado") {
+                    alert("Lo sentimos, MJ no agenda masajes en este día.");
+                    return;
+                }
+                clientSelectedDate = dateStr;
+                renderCalendarUI(containerId, false);
+                window.actualizarHorasDisponibles(dateStr);
+            }
+        };
+
+        // --- CONTROLADORES DE INTERFAZ GENERAL ---
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
@@ -176,7 +354,15 @@
                     document.getElementById('name-setup').classList.remove('hidden');
                 } else {
                     document.getElementById('name-setup').classList.add('hidden');
-                    if (user.email === ADMIN_EMAIL) { activarAdmin(); } else { activarCliente(user); }
+                    if (user.email === ADMIN_EMAIL) {
+                        document.getElementById('admin-panel').classList.remove('hidden');
+                        renderCalendarUI('calendar-admin-container', true);
+                    } else {
+                        document.getElementById('client-panel').classList.remove('hidden');
+                        document.getElementById('client-welcome-name').innerText = user.displayName;
+                        renderCalendarUI('calendar-client-container', false);
+                        window.actualizarHorasDisponibles("");
+                    }
                 }
             } else {
                 document.getElementById('auth-screen').classList.remove('hidden');
@@ -185,165 +371,10 @@
             }
         });
 
-        // --- CLIENTE ---
-        function activarCliente(user) {
-            document.getElementById('client-panel').classList.remove('hidden');
-            document.getElementById('client-welcome-name').innerText = user.displayName;
-            onSnapshot(query(collection(db, "citas"), where("userId", "==", user.uid)), (snap) => {
-                const div = document.getElementById('lista-mis-citas');
-                div.innerHTML = "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    div.innerHTML += `<div class="p-3 bg-white border rounded shadow-sm text-xs flex justify-between">
-                        <span>${new Date(data.fecha).toLocaleString()}</span>
-                        <span class="font-bold text-ritual-gold">${data.estado.toUpperCase()}</span>
-                    </div>`;
-                });
-            });
-            cargarChat(user.uid, 'chat-box-client');
-        }
+        // --- RENDERIZADO CLIENTE ---
+        function renderListasCliente() {
+            const div = document.getElementById('lista-mis-citas');
+            if (!div || !currentUser) return;
 
-        // FUNCIÓN CLAVE CORREGIDA PARA LAS NOTAS
-        window.solicitarCita = async () => {
-            const fechaInput = document.getElementById('fechaSolicitud').value;
-            const notaInput = document.getElementById('notaCliente').value; 
-            
-            if(!fechaInput) return alert("Selecciona fecha y hora");
-
-            await addDoc(collection(db, "citas"), {
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email,
-                fecha: fechaInput,
-                nota: notaInput, // Se guarda aquí con seguridad
-                estado: "pendiente",
-                creado: serverTimestamp()
-            });
-
-            document.getElementById('notaCliente').value = "";
-            document.getElementById('fechaSolicitud').value = "";
-            alert("Solicitud enviada correctamente");
-        };
-
-        // --- ADMIN ---
-        function activarAdmin() {
-            document.getElementById('admin-panel').classList.remove('hidden');
-
-            // Solicitudes con NOTA VISIBLE
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
-                const div = document.getElementById('lista-solicitudes');
-                div.innerHTML = snap.empty ? "<p class='text-xs text-gray-400'>No hay pendientes</p>" : "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    const notaFinal = (data.nota && data.nota.trim() !== "") ? data.nota : "Sin nota";
-                    div.innerHTML += `<div class="p-3 bg-white border rounded shadow-md">
-                        <p class="font-bold text-sm">${data.userName}</p>
-                        <p class="text-[10px] text-gray-500 mb-2">${new Date(data.fecha).toLocaleString()}</p>
-                        <div class="bg-blue-50 p-2 rounded border border-blue-100 mb-2">
-                           <p class="text-xs text-blue-800"><strong>Mensaje:</strong> ${notaFinal}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="gestionarCita('${d.id}', 'confirmada')" class="bg-green-500 text-white px-3 py-1 rounded text-[10px] font-bold">ACEPTAR</button>
-                            <button onclick="cancelarCita('${d.id}')" class="bg-red-400 text-white px-3 py-1 rounded text-[10px]">RECHAZAR</button>
-                        </div>
-                    </div>`;
-                });
-            });
-
-            // Agenda con NOTA
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
-                const div = document.getElementById('lista-todas-citas');
-                div.innerHTML = snap.empty ? "<p class='text-xs text-gray-400'>Sin citas hoy</p>" : "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    div.innerHTML += `<div class="p-3 bg-green-50 border border-green-200 rounded flex justify-between items-center">
-                        <div>
-                            <p class="text-sm font-bold">${data.userName}</p>
-                            <p class="text-[10px]">${new Date(data.fecha).toLocaleString()}</p>
-                            <p class="text-[10px] italic text-gray-500">Nota: ${data.nota || '-'}</p>
-                        </div>
-                        <button onclick="terminarMasaje('${d.id}')" class="bg-green-600 text-white px-3 py-1 rounded text-[10px]">LISTO</button>
-                    </div>`;
-                });
-            });
-
-            // Historial
-            onSnapshot(collection(db, "historial"), (snap) => {
-                const div = document.getElementById('lista-historial');
-                div.innerHTML = snap.empty ? "Vacío" : "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    div.innerHTML += `<div class="flex justify-between border-b pb-1">
-                        <span>${data.userName} - ${new Date(data.fechaFin).toLocaleDateString()}</span>
-                        <button onclick="borrarHistorial('${d.id}')" class="text-red-400"><i class="fas fa-trash"></i></button>
-                    </div>`;
-                });
-            });
-            cargarListaUsuariosChat();
-        }
-
-        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); };
-        window.cancelarCita = async (id) => { if(confirm("¿Borrar cita?")) await deleteDoc(doc(db, "citas", id)); };
-        window.borrarHistorial = async (id) => { if(confirm("¿Eliminar?")) await deleteDoc(doc(db, "historial", id)); };
-
-        window.terminarMasaje = async (id) => {
-            const ref = doc(db, "citas", id);
-            const snap = await getDoc(ref);
-            if(snap.exists()){
-                await addDoc(collection(db, "historial"), { ...snap.data(), fechaFin: new Date().toISOString() });
-                await deleteDoc(ref);
-            }
-        };
-
-        // --- CHAT ---
-        function cargarChat(chatUid, containerId) {
-            const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid));
-            return onSnapshot(q, (snapshot) => {
-                const div = document.getElementById(containerId);
-                const msgs = [];
-                snapshot.forEach(doc => msgs.push(doc.data()));
-                msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                div.innerHTML = "";
-                msgs.forEach(d => {
-                    const esMio = d.emisorId === currentUser.uid;
-                    const bg = esMio ? "bg-ritual-gold text-white self-end" : "bg-gray-200 text-gray-800 self-start";
-                    div.innerHTML += `<div class="px-2 py-1 rounded-lg max-w-[80%] ${bg}">${d.texto}</div>`;
-                });
-                div.scrollTop = div.scrollHeight;
-            });
-        }
-
-        window.enviarMensajeCliente = async () => {
-            const t = document.getElementById('msg-client').value;
-            if(!t) return;
-            await addDoc(collection(db, "mensajes"), { chatId: currentUser.uid, emisorId: currentUser.uid, texto: t, timestamp: serverTimestamp() });
-            document.getElementById('msg-client').value = "";
-        };
-
-        window.enviarMensajeAdmin = async () => {
-            const t = document.getElementById('msg-admin').value;
-            if(!t || !selectedChatUserId) return;
-            await addDoc(collection(db, "mensajes"), { chatId: selectedChatUserId, emisorId: currentUser.uid, texto: t, timestamp: serverTimestamp() });
-            document.getElementById('msg-admin').value = "";
-        };
-
-        function cargarListaUsuariosChat() {
-            onSnapshot(collection(db, "citas"), (snap) => {
-                const select = document.getElementById('select-chat-user');
-                const users = new Map();
-                snap.forEach(doc => { const d = doc.data(); if(d.userId) users.set(d.userId, d.userName); });
-                const currentVal = select.value;
-                select.innerHTML = '<option value="">Seleccionar cliente...</option>';
-                users.forEach((name, id) => { select.innerHTML += `<option value="${id}">${name}</option>`; });
-                select.value = currentVal;
-            });
-        }
-
-        window.cargarChatAdmin = () => {
-            selectedChatUserId = document.getElementById('select-chat-user').value;
-            if (unsubscribeAdminChat) unsubscribeAdminChat();
-            if(selectedChatUserId) unsubscribeAdminChat = cargarChat(selectedChatUserId, 'chat-box-admin');
-        };
-
-    </script>
-</body>
-</html>
+            const misCitas = globalCitas.filter(c => c.userId === currentUser.uid);
+       
