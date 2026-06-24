@@ -20,7 +20,7 @@
         }
     </script>
     <style>
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         .gold-btn { background-color: #C8A165; color: white; border-radius: 8px; font-weight: bold; }
         .profile-card { border-top: 4px solid #C8A165; }
         #chat-box-client, #chat-box-admin { scroll-behavior: smooth; }
@@ -64,65 +64,123 @@
             </div>
         </section>
 
-        <section id="client-panel" class="hidden">
-            <h2 class="text-xl font-serif mb-4">Hola, <span id="client-welcome-name"></span></h2>
+        <section id="client-panel" class="hidden space-y-6">
+            <h2 class="text-xl font-serif">Hola, <span id="client-welcome-name"></span></h2>
             
-            <div class="bg-white p-5 rounded-lg shadow-md mb-6">
-                <h3 class="font-bold text-ritual-gold mb-3">Solicitar Cita</h3>
-                <input type="datetime-local" id="fechaSolicitud" class="w-full p-2 border rounded mb-3">
+            <div class="bg-white p-5 rounded-lg shadow-md">
+                <h3 class="font-bold text-ritual-gold mb-3 flex items-center gap-2 text-sm">
+                    <i class="fas fa-calendar-alt"></i> Selecciona Fecha y Hora
+                </h3>
+                
+                <div id="calendar-client-container" class="mb-4"></div>
+                
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-500 mb-1">Hora disponible:</label>
+                    <select id="horaSolicitud" class="w-full p-2 border rounded text-sm bg-white">
+                        <option value="">Selecciona un día primero</option>
+                    </select>
+                </div>
+
                 <textarea id="notaCliente" placeholder="¿Qué masaje deseas o qué zona te duele?" class="w-full p-2 border rounded mb-3 h-20 text-sm"></textarea>
                 <button onclick="solicitarCita()" class="w-full gold-btn py-2">Enviar Solicitud</button>
             </div>
 
-            <div class="mb-6">
-                <h3 class="font-bold mb-2 text-sm">Estado de mis masajes</h3>
+            <div>
+                <h3 class="font-bold mb-2 text-sm text-gray-600">Estado de mis masajes</h3>
                 <div id="lista-mis-citas" class="space-y-2"></div>
             </div>
 
             <div class="bg-white p-4 rounded shadow">
-                <h3 class="font-bold text-xs mb-2">Chat con MJ</h3>
+                <h3 class="font-bold text-xs mb-2 text-ritual-gold">Chat con MJ</h3>
                 <div id="chat-box-client" class="h-40 overflow-y-auto bg-gray-50 p-2 mb-2 border rounded text-xs flex flex-col gap-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="msg-client" class="flex-grow p-2 border rounded text-sm">
+                    <input type="text" id="msg-client" class="flex-grow p-2 border rounded text-sm" placeholder="Escribe un mensaje...">
                     <button onclick="enviarMensajeCliente()" class="bg-ritual-dark text-white px-3 rounded"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         </section>
 
-        <section id="admin-panel" class="hidden">
-            <h2 class="bg-ritual-gold text-white p-3 rounded mb-6 text-center font-serif tracking-widest">AGENDA DE MJ</h2>
+        <section id="admin-panel" class="hidden space-y-6">
+            <h2 class="bg-ritual-gold text-white p-3 rounded text-center font-serif tracking-widest shadow-md">AGENDA DE MJ</h2>
 
-            <div class="mb-8">
+            <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <h3 class="font-bold text-sm text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="fas fa-toggle-on text-ritual-gold"></i> GESTIÓN DE DIAS LIBRES
+                </h3>
+                <p class="text-[11px] text-gray-500 mb-3">Pulsa sobre cualquier día para abrirlo (verde) o cerrarlo por completo (rojo/linea).</p>
+                <div id="calendar-admin-container"></div>
+            </div>
+
+            <div>
                 <h3 class="font-bold text-orange-600 mb-3 flex items-center gap-2 text-sm">🔔 SOLICITUDES NUEVAS</h3>
                 <div id="lista-solicitudes" class="space-y-3"></div>
             </div>
 
-            <div class="mb-8">
-                <h3 class="font-bold text-green-700 mb-3 flex items-center gap-2 text-sm">📅 CITAS PARA HOY</h3>
+            <div>
+                <h3 class="font-bold text-green-700 mb-3 flex items-center gap-2 text-sm">📅 CITAS PLANIFICADAS</h3>
                 <div id="lista-todas-citas" class="space-y-3"></div>
             </div>
 
-            <div class="mb-8">
+            <div>
                 <h3 class="font-bold text-gray-500 mb-3 flex items-center gap-2 text-sm">⌛ HISTORIAL</h3>
                 <div id="lista-historial" class="bg-white rounded p-3 shadow-inner max-h-40 overflow-y-auto space-y-2 text-xs"></div>
             </div>
 
-            <div class="bg-white p-4 rounded shadow-lg border-t-4 border-blue-400">
-                <h3 class="font-bold text-xs mb-2">Mensajes de Clientes</h3>
-                <select id="select-chat-user" onchange="cargarChatAdmin()" class="w-full p-2 border mb-2 text-sm"></select>
-                <div id="chat-box-admin" class="h-40 overflow-y-auto bg-gray-50 p-2 mb-2 border rounded text-xs flex flex-col gap-2"></div>
-                <div class="flex gap-2">
-                    <input type="text" id="msg-admin" class="flex-grow p-2 border rounded text-sm">
-                    <button onclick="enviarMensajeAdmin()" class="bg-ritual-dark text-white px-3 rounded"><i class="fas fa-paper-plane"></i></button>
+            <div class="bg-white rounded shadow-lg border-t-4 border-blue-400 overflow-hidden">
+                <h3 class="font-bold text-xs p-3 bg-gray-50 border-b text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-comments text-blue-500"></i> Centro de Mensajes
+                </h3>
+                <div class="grid grid-cols-3 h-64">
+                    <div id="admin-chat-threads" class="col-span-1 border-r overflow-y-auto bg-gray-50 p-2 flex flex-col gap-1">
+                        <p class="text-[10px] text-gray-400 text-center py-4">Cargando chats...</p>
+                    </div>
+                    <div class="col-span-2 flex flex-col p-2 bg-white justify-between">
+                        <div id="chat-box-admin" class="flex-grow h-40 overflow-y-auto bg-gray-50 p-2 mb-2 border rounded text-xs flex flex-col gap-2">
+                            <p class="text-gray-400 text-center my-auto text-[11px]">Selecciona un cliente</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="msg-admin" class="flex-grow p-2 border rounded text-xs" placeholder="Responder...">
+                            <button onclick="enviarMensajeAdmin()" class="bg-ritual-dark text-white px-3 rounded text-xs"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
+
+        <!-- MODAL REPROGRAMAR CITA -->
+        <div id="modal-reprogramar" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center p-4">
+            <div class="bg-white p-5 rounded-lg shadow-xl w-full max-w-sm border-t-4 border-ritual-gold relative">
+                <h3 class="font-serif text-lg mb-3">Reprogramar Cita</h3>
+                <p class="text-xs text-gray-500 mb-3">Selecciona el nuevo día y hora que le propones al cliente.</p>
+                <label class="block text-xs font-bold text-gray-500 mb-1">Nueva Fecha:</label>
+                <input type="date" id="repo-date" class="w-full p-2 border rounded mb-3 text-sm">
+                
+                <label class="block text-xs font-bold text-gray-500 mb-1">Nueva Hora:</label>
+                <select id="repo-time" class="w-full p-2 border rounded mb-4 text-sm">
+                    <option value="09:00">09:00</option>
+                    <option value="10:00">10:00</option>
+                    <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option>
+                    <option value="13:00">13:00</option>
+                    <option value="16:00">16:00</option>
+                    <option value="17:00">17:00</option>
+                    <option value="18:00">18:00</option>
+                    <option value="19:00">19:00</option>
+                    <option value="20:00">20:00</option>
+                </select>
+                
+                <div class="flex gap-2">
+                    <button onclick="window.confirmarReprogramacion()" class="flex-grow gold-btn py-2 text-sm shadow">Enviar Propuesta</button>
+                    <button onclick="window.cerrarModalReprogramar()" class="flex-grow bg-gray-200 text-gray-700 rounded py-2 text-sm font-bold shadow">Cancelar</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAIqduek2X9EaRbGlojrcHvxupiU4oPQcw",
@@ -137,11 +195,30 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const ADMIN_EMAIL = "mjll5@masajesmj.com";
-        let currentUser = null;
+        
         let selectedChatUserId = null;
-        let unsubscribeAdminChat = null;
+        let listenersIniciados = false;
+        let citaAReprogramarId = null; // Variable global para la reprogramación
 
-        // --- ACCESO ---
+        let unsubDisponibilidad = null;
+        let unsubCitasAdmin = null;
+        let unsubCitasClienteA = null;
+        let unsubCitasClienteB = null;
+        let unsubHistorial = null;
+        let unsubMensajesThreads = null;
+        let unsubscribeAdminChat = null;
+        let unsubscribeClientChat = null;
+
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth();
+        let clientSelectedDate = null;
+        let globalDisponibilidad = {};
+        let globalCitas = [];
+
+        const comprobarSiEsAdmin = (user) => {
+            return user && user.email && user.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        };
+
         window.login = async () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
@@ -153,197 +230,655 @@
         };
 
         window.registro = async () => {
-            const e = document.getElementById('email').value;
-            const p = document.getElementById('password').value;
-            try { await createUserWithEmailAndPassword(auth, e, p); } catch (err) { alert("Error al registrar"); }
+            const e = document.getElementById('email').value.trim();
+            const p = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+            
+            if (!e || !p) {
+                errorDiv.innerText = "Por favor, rellena todos los campos.";
+                return;
+            }
+
+            try { 
+                errorDiv.innerText = ""; 
+                await createUserWithEmailAndPassword(auth, e, p); 
+            } catch (err) { 
+                if (err.code === 'auth/email-already-in-use') {
+                    errorDiv.innerText = "Este correo ya está registrado.";
+                } else if (err.code === 'auth/weak-password') {
+                    errorDiv.innerText = "La contraseña debe tener al menos 6 caracteres.";
+                } else {
+                    errorDiv.innerText = "Error al registrar.";
+                }
+            }
         };
 
-        window.cerrarSesion = () => signOut(auth);
+        function desvincularTodosLosListeners() {
+            if (unsubDisponibilidad) { unsubDisponibilidad(); unsubDisponibilidad = null; }
+            if (unsubCitasAdmin) { unsubCitasAdmin(); unsubCitasAdmin = null; }
+            if (unsubCitasClienteA) { unsubCitasClienteA(); unsubCitasClienteA = null; }
+            if (unsubCitasClienteB) { unsubCitasClienteB(); unsubCitasClienteB = null; }
+            if (unsubHistorial) { unsubHistorial(); unsubHistorial = null; }
+            if (unsubMensajesThreads) { unsubMensajesThreads(); unsubMensajesThreads = null; }
+            if (unsubscribeAdminChat) { unsubscribeAdminChat(); unsubscribeAdminChat = null; }
+            if (unsubscribeClientChat) { unsubscribeClientChat(); unsubscribeClientChat = null; }
+        }
+
+        window.cerrarSesion = () => {
+            listenersIniciados = false;
+            desvincularTodosLosListeners();
+            globalCitas = [];
+            globalDisponibilidad = {};
+            clientSelectedDate = null;
+            selectedChatUserId = null;
+            signOut(auth).then(() => {
+                location.reload(); 
+            });
+        };
 
         window.guardarNombrePerfil = async () => {
             const n = document.getElementById('new-display-name').value;
             if (n) { await updateProfile(auth.currentUser, { displayName: n }); location.reload(); }
         };
 
-        // --- ESTADO SESIÓN ---
         onAuthStateChanged(auth, (user) => {
-            currentUser = user;
             if (user) {
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('btnLogout').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = user.displayName || user.email;
-                if (!user.displayName && user.email !== ADMIN_EMAIL) {
+                
+                const esAdmin = comprobarSiEsAdmin(user);
+
+                if (!user.displayName && !esAdmin) {
                     document.getElementById('name-setup').classList.remove('hidden');
                 } else {
                     document.getElementById('name-setup').classList.add('hidden');
-                    if (user.email === ADMIN_EMAIL) { activarAdmin(); } else { activarCliente(user); }
+                    if (!listenersIniciados) {
+                        iniciarBaseDeDatos();
+                        listenersIniciados = true;
+                    }
+                    
+                    if (esAdmin) { 
+                        document.getElementById('admin-panel').classList.remove('hidden');
+                    } else { 
+                        document.getElementById('client-panel').classList.remove('hidden');
+                        document.getElementById('client-welcome-name').innerText = user.displayName || 'Cliente';
+                        cargarChat(user.uid, 'chat-box-client');
+                    }
                 }
             } else {
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('client-panel').classList.add('hidden');
                 document.getElementById('admin-panel').classList.add('hidden');
+                document.getElementById('btnLogout').classList.add('hidden');
             }
         });
 
-        // --- CLIENTE ---
-        function activarCliente(user) {
-            document.getElementById('client-panel').classList.remove('hidden');
-            document.getElementById('client-welcome-name').innerText = user.displayName;
-            onSnapshot(query(collection(db, "citas"), where("userId", "==", user.uid)), (snap) => {
-                const div = document.getElementById('lista-mis-citas');
-                div.innerHTML = "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    div.innerHTML += `<div class="p-3 bg-white border rounded shadow-sm text-xs flex justify-between">
-                        <span>${new Date(data.fecha).toLocaleString()}</span>
-                        <span class="font-bold text-ritual-gold">${data.estado.toUpperCase()}</span>
-                    </div>`;
-                });
+        function iniciarBaseDeDatos() {
+            desvincularTodosLosListeners(); 
+
+            unsubDisponibilidad = onSnapshot(collection(db, "disponibilidad"), (snap) => {
+                globalDisponibilidad = {};
+                snap.forEach(d => { globalDisponibilidad[d.id] = d.data().estado; });
+                actualizarCalendarios();
             });
-            cargarChat(user.uid, 'chat-box-client');
+
+            if (comprobarSiEsAdmin(auth.currentUser)) {
+                unsubCitasAdmin = onSnapshot(collection(db, "citas"), (snap) => {
+                    globalCitas = [];
+                    snap.forEach(d => { globalCitas.push({ id: d.id, ...d.data() }); });
+                    actualizarCalendarios();
+                    renderListasAdmin();
+                });
+
+                unsubHistorial = onSnapshot(collection(db, "historial"), (snap) => {
+                    const div = document.getElementById('lista-historial');
+                    if (!div) return;
+                    div.innerHTML = snap.empty ? "Historial vacío" : "";
+                    snap.forEach(d => {
+                        const data = d.data();
+                        div.innerHTML += `<div class="flex justify-between border-b pb-1 items-center">
+                            <span>${data.userName || 'Usuario'} - ${data.fechaCita || ''}</span>
+                            <button onclick="window.borrarHistorial('${d.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fas fa-trash"></i></button>
+                        </div>`;
+                    });
+                });
+
+                unsubMensajesThreads = onSnapshot(collection(db, "mensajes"), (snap) => {
+                    const threadsDiv = document.getElementById('admin-chat-threads');
+                    if (!threadsDiv) return;
+                    
+                    const clientes = {};
+                    snap.forEach(d => {
+                        const data = d.data();
+                        const uid = data.userId;
+                        if (uid) {
+                            const msgTime = (data.timestamp && typeof data.timestamp.toMillis === 'function') ? data.timestamp.toMillis() : Date.now();
+                            
+                            if (!clientes[uid]) {
+                                clientes[uid] = { name: 'Cliente', ultimoMsg: '', timestamp: 0 };
+                            }
+                            
+                            if (data.senderId !== 'admin') {
+                                clientes[uid].name = data.clientName || data.senderName || 'Cliente';
+                            }
+
+                            if (msgTime >= clientes[uid].timestamp) {
+                                clientes[uid].ultimoMsg = data.texto || '';
+                                clientes[uid].timestamp = msgTime;
+                            }
+                        }
+                    });
+                    
+                    const totalClientes = Object.keys(clientes);
+                    if (totalClientes.length === 0) {
+                        threadsDiv.innerHTML = '<p class="text-[10px] text-gray-400 text-center py-4">Sin mensajes</p>';
+                        return;
+                    }
+                    
+                    totalClientes.sort((a,b) => clientes[b].timestamp - clientes[a].timestamp);
+                    
+                    threadsDiv.innerHTML = '';
+                    totalClientes.forEach(uid => {
+                        const c = clientes[uid];
+                        const esActivo = selectedChatUserId === uid;
+                        const bgClass = esActivo ? 'bg-ritual-gold text-white' : 'bg-white text-gray-700 hover:bg-gray-100';
+                        threadsDiv.innerHTML += `
+                            <button type="button" id="thread-btn-${uid}" onclick="window.seleccionarChatAdmin('${uid}')" class="p-2 rounded text-left text-[11px] border shadow-sm transition truncate flex flex-col w-full ${bgClass}">
+                                <span class="font-bold truncate w-full">${c.name}</span>
+                                <span class="text-[9px] opacity-80 truncate w-full">${c.ultimoMsg}</span>
+                            </button>
+                        `;
+                    });
+                });
+            } else {
+                unsubCitasClienteA = onSnapshot(query(collection(db, "citas"), where("userId", "==", auth.currentUser.uid)), (snap) => {
+                    const filtradasOtros = globalCitas.filter(c => c.userId !== auth.currentUser.uid);
+                    globalCitas = [...filtradasOtros];
+                    snap.forEach(d => { globalCitas.push({ id: d.id, ...d.data() }); });
+                    actualizarCalendarios();
+                    actualizarHorasDisponibles();
+                    renderListasCliente();
+                });
+
+                unsubCitasClienteB = onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
+                    const filtradasPropias = globalCitas.filter(c => c.userId === auth.currentUser.uid);
+                    globalCitas = [...filtradasPropias];
+                    snap.forEach(d => {
+                        if (!globalCitas.some(c => c.id === d.id)) {
+                            globalCitas.push({ id: d.id, ...d.data() });
+                        }
+                    });
+                    actualizarCalendarios();
+                    actualizarHorasDisponibles();
+                    renderListasCliente();
+                });
+            }
         }
 
-        // FUNCIÓN CLAVE CORREGIDA PARA LAS NOTAS
-        window.solicitarCita = async () => {
-            const fechaInput = document.getElementById('fechaSolicitud').value;
-            const notaInput = document.getElementById('notaCliente').value; 
-            
-            if(!fechaInput) return alert("Selecciona fecha y hora");
+        function actualizarCalendarios() {
+            if (!auth.currentUser) return;
+            if (comprobarSiEsAdmin(auth.currentUser)) {
+                renderCalendarUI('calendar-admin-container', true);
+            } else {
+                renderCalendarUI('calendar-client-container', false);
+            }
+        }
 
-            await addDoc(collection(db, "citas"), {
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email,
-                fecha: fechaInput,
-                nota: notaInput, // Se guarda aquí con seguridad
-                estado: "pendiente",
-                creado: serverTimestamp()
-            });
+        function renderCalendarUI(containerId, isAdmin) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
 
-            document.getElementById('notaCliente').value = "";
-            document.getElementById('fechaSolicitud').value = "";
-            alert("Solicitud enviada correctamente");
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const primerDiaIndex = new Date(calYear, calMonth, 1).getDay();
+            const desfase = primerDiaIndex === 0 ? 6 : primerDiaIndex - 1; 
+            const totalDias = new Date(calYear, calMonth + 1, 0).getDate();
+
+            let html = `
+                <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <button type="button" class="px-2 py-1 bg-white border rounded text-xs font-bold shadow-sm" onclick="window.navegarMes(-1, '${containerId}', ${isAdmin})">&lt;</button>
+                        <span class="text-xs font-serif font-bold text-ritual-dark">${meses[calMonth]} ${calYear}</span>
+                        <button type="button" class="px-2 py-1 bg-white border rounded text-xs font-bold shadow-sm" onclick="window.navegarMes(1, '${containerId}', ${isAdmin})">&gt;</button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 mb-1">
+                        <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1">
+            `;
+
+            for (let i = 0; i < desfase; i++) { html += `<div></div>`; }
+
+            for (let d = 1; d <= totalDias; d++) {
+                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const estadoDia = globalDisponibilidad[dateStr] || "abierto"; 
+                
+                let btnEstilo = "bg-green-50 text-green-800 border border-green-200";
+                if (estadoDia === "cerrado") {
+                    btnEstilo = "bg-red-50 text-red-700 border border-red-200 line-through opacity-60";
+                }
+
+                if (!isAdmin && dateStr === clientSelectedDate) {
+                    btnEstilo = "bg-ritual-gold text-white font-bold ring-2 ring-offset-1 ring-ritual-gold";
+                }
+
+                let citasHtml = "";
+                if (isAdmin) {
+                    const citasDia = globalCitas.filter(c => c.fecha && c.fecha.startsWith(dateStr) && c.estado === "confirmada");
+                    citasDia.forEach(c => {
+                        const hora = c.fecha.split('T')[1] || '';
+                        citasHtml += `<div class="text-[8px] leading-tight bg-blue-600 text-white rounded px-0.5 mt-0.5 truncate w-full text-left">
+                            ${hora} ${(c.userName || 'Cliente').split(' ')[0]}
+                        </div>`;
+                    });
+                }
+
+                html += `
+                    <button type="button" onclick="window.eventoClickDia('${dateStr}', ${isAdmin}, '${containerId}')" 
+                        class="p-1 min-h-[48px] flex flex-col justify-between items-center text-[11px] rounded transition ${btnEstilo}">
+                        <span class="font-bold">${d}</span>
+                        <div class="w-full">${citasHtml}</div>
+                    </button>
+                `;
+            }
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        window.navegarMes = (dir, containerId, isAdmin) => {
+            calMonth += dir;
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            renderCalendarUI(containerId, isAdmin);
         };
 
-        // --- ADMIN ---
-        function activarAdmin() {
-            document.getElementById('admin-panel').classList.remove('hidden');
-
-            // Solicitudes con NOTA VISIBLE
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "pendiente")), (snap) => {
-                const div = document.getElementById('lista-solicitudes');
-                div.innerHTML = snap.empty ? "<p class='text-xs text-gray-400'>No hay pendientes</p>" : "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    const notaFinal = (data.nota && data.nota.trim() !== "") ? data.nota : "Sin nota";
-                    div.innerHTML += `<div class="p-3 bg-white border rounded shadow-md">
-                        <p class="font-bold text-sm">${data.userName}</p>
-                        <p class="text-[10px] text-gray-500 mb-2">${new Date(data.fecha).toLocaleString()}</p>
-                        <div class="bg-blue-50 p-2 rounded border border-blue-100 mb-2">
-                           <p class="text-xs text-blue-800"><strong>Mensaje:</strong> ${notaFinal}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="gestionarCita('${d.id}', 'confirmada')" class="bg-green-500 text-white px-3 py-1 rounded text-[10px] font-bold">ACEPTAR</button>
-                            <button onclick="cancelarCita('${d.id}')" class="bg-red-400 text-white px-3 py-1 rounded text-[10px]">RECHAZAR</button>
-                        </div>
-                    </div>`;
-                });
-            });
-
-            // Agenda con NOTA
-            onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
-                const div = document.getElementById('lista-todas-citas');
-                div.innerHTML = snap.empty ? "<p class='text-xs text-gray-400'>Sin citas hoy</p>" : "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    div.innerHTML += `<div class="p-3 bg-green-50 border border-green-200 rounded flex justify-between items-center">
-                        <div>
-                            <p class="text-sm font-bold">${data.userName}</p>
-                            <p class="text-[10px]">${new Date(data.fecha).toLocaleString()}</p>
-                            <p class="text-[10px] italic text-gray-500">Nota: ${data.nota || '-'}</p>
-                        </div>
-                        <button onclick="terminarMasaje('${d.id}')" class="bg-green-600 text-white px-3 py-1 rounded text-[10px]">LISTO</button>
-                    </div>`;
-                });
-            });
-
-            // Historial
-            onSnapshot(collection(db, "historial"), (snap) => {
-                const div = document.getElementById('lista-historial');
-                div.innerHTML = snap.empty ? "Vacío" : "";
-                snap.forEach(d => {
-                    const data = d.data();
-                    div.innerHTML += `<div class="flex justify-between border-b pb-1">
-                        <span>${data.userName} - ${new Date(data.fechaFin).toLocaleDateString()}</span>
-                        <button onclick="borrarHistorial('${d.id}')" class="text-red-400"><i class="fas fa-trash"></i></button>
-                    </div>`;
-                });
-            });
-            cargarListaUsuariosChat();
-        }
-
-        window.gestionarCita = async (id, est) => { await updateDoc(doc(db, "citas", id), { estado: est }); };
-        window.cancelarCita = async (id) => { if(confirm("¿Borrar cita?")) await deleteDoc(doc(db, "citas", id)); };
-        window.borrarHistorial = async (id) => { if(confirm("¿Eliminar?")) await deleteDoc(doc(db, "historial", id)); };
-
-        window.terminarMasaje = async (id) => {
-            const ref = doc(db, "citas", id);
-            const snap = await getDoc(ref);
-            if(snap.exists()){
-                await addDoc(collection(db, "historial"), { ...snap.data(), fechaFin: new Date().toISOString() });
-                await deleteDoc(ref);
+        window.eventoClickDia = async (dateStr, isAdmin, containerId) => {
+            if (isAdmin) {
+                try {
+                    const estadoActual = globalDisponibilidad[dateStr] || "abierto";
+                    const nuevoEstado = estadoActual === "abierto" ? "cerrado" : "abierto";
+                    await setDoc(doc(db, "disponibilidad", dateStr), { estado: nuevoEstado });
+                } catch (err) {
+                    alert("Error guardando disponibilidad.");
+                }
+            } else {
+                if (globalDisponibilidad[dateStr] === "cerrado") {
+                    alert("Lo sentimos, MJ no agenda masajes en este día.");
+                    return;
+                }
+                clientSelectedDate = dateStr;
+                renderCalendarUI(containerId, false);
+                actualizarHorasDisponibles();
             }
         };
 
-        // --- CHAT ---
-        function cargarChat(chatUid, containerId) {
-            const q = query(collection(db, "mensajes"), where("chatId", "==", chatUid));
-            return onSnapshot(q, (snapshot) => {
-                const div = document.getElementById(containerId);
-                const msgs = [];
-                snapshot.forEach(doc => msgs.push(doc.data()));
-                msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                div.innerHTML = "";
-                msgs.forEach(d => {
-                    const esMio = d.emisorId === currentUser.uid;
-                    const bg = esMio ? "bg-ritual-gold text-white self-end" : "bg-gray-200 text-gray-800 self-start";
-                    div.innerHTML += `<div class="px-2 py-1 rounded-lg max-w-[80%] ${bg}">${d.texto}</div>`;
+        function actualizarHorasDisponibles() {
+            if (!clientSelectedDate) return;
+            const selectHora = document.getElementById('horaSolicitud');
+            if (!selectHora) return;
+            
+            selectHora.innerHTML = '<option value="">-- Elige una hora disponible --</option>';
+            const horasDisponibles = ["09:00", "10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
+            
+            const horasOcupadas = globalCitas
+                .filter(c => c.estado === "confirmada" && c.fecha && c.fecha.startsWith(clientSelectedDate))
+                .map(c => c.fecha.split('T')[1] || '');
+                
+            horasDisponibles.forEach(h => {
+                const estaOcupada = horasOcupadas.includes(h);
+                if (estaOcupada) {
+                    selectHora.innerHTML += `<option value="ocupado" disabled class="text-gray-300 bg-gray-100">${h} ❌ OCUPADO (Ya reservado)</option>`;
+                } else {
+                    selectHora.innerHTML += `<option value="${h}">${h}</option>`;
+                }
+            });
+        }
+
+        window.solicitarCita = async () => {
+            if (!clientSelectedDate) {
+                alert("Por favor, selecciona primero un día en el calendario.");
+                return;
+            }
+            const hora = document.getElementById('horaSolicitud').value;
+            if (!hora || hora === "ocupado") {
+                alert("Por favor, selecciona una hora válida y libre.");
+                return;
+            }
+            const nota = document.getElementById('notaCliente').value.trim();
+            
+            try {
+                await addDoc(collection(db, "citas"), {
+                    userId: auth.currentUser.uid,
+                    userName: auth.currentUser.displayName || auth.currentUser.email,
+                    fecha: `${clientSelectedDate}T${hora}`,
+                    nota: nota,
+                    estado: "pendiente",
+                    createdAt: serverTimestamp()
+                });
+                alert("¡Solicitud enviada con éxito! Espera la confirmación de MJ.");
+                document.getElementById('notaCliente').value = '';
+                document.getElementById('horaSolicitud').value = '';
+            } catch (err) {
+                alert("Error al enviar la solicitud.");
+            }
+        };
+
+        function renderListasCliente() {
+            const div = document.getElementById('lista-mis-citas');
+            if (!div) return;
+            div.innerHTML = '';
+            
+            if (!auth.currentUser) return;
+            const misCitas = globalCitas.filter(c => c.userId === auth.currentUser.uid);
+            if (misCitas.length === 0) {
+                div.innerHTML = '<p class="text-xs text-gray-400">No tienes solicitudes creadas.</p>';
+                return;
+            }
+            
+            misCitas.sort((a,b) => (b.fecha || "").localeCompare(a.fecha || ""));
+
+            misCitas.forEach(c => {
+                let badge = '';
+                let contentExtra = '';
+
+                if (c.estado === 'pendiente') badge = '<span class="bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded font-bold">Pendiente</span>';
+                if (c.estado === 'confirmada') badge = '<span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded font-bold">Confirmada</span>';
+                if (c.estado === 'rechazada') badge = '<span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded font-bold">Rechazada</span>';
+                
+                // NUEVA LÓGICA PARA REPROGRAMACIÓN:
+                if (c.estado === 'reprogramada') {
+                    badge = '<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded font-bold shadow-sm">MJ Propone Cambio</span>';
+                    const [pFecha, pHora] = (c.fechaPropuesta || "T").split('T');
+                    contentExtra = `
+                        <div class="mt-2 bg-blue-50 p-2 rounded border border-blue-200">
+                            <p class="text-[11px] text-blue-900 mb-2">¿Te viene bien el <strong>${pFecha} a las ${pHora || ''}</strong>?</p>
+                            <div class="flex gap-2">
+                                <button onclick="window.responderReprogramacionCliente('${c.id}', true, '${c.fechaPropuesta}')" class="bg-blue-600 text-white px-2 py-1.5 rounded text-[10px] font-bold shadow-sm flex-grow">Aceptar Nueva</button>
+                                <button onclick="window.responderReprogramacionCliente('${c.id}', false, '')" class="bg-red-500 text-white px-2 py-1.5 rounded text-[10px] font-bold shadow-sm flex-grow">Rechazar</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
+                div.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow-sm border text-xs">
+                        <div class="flex justify-between items-start mb-1">
+                            <div>
+                                <p class="font-bold text-gray-700">${fecha} a las ${hora || ''}</p>
+                                <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin comentarios'}</p>
+                            </div>
+                            <div>${badge}</div>
+                        </div>
+                        ${contentExtra}
+                    </div>
+                `;
+            });
+        }
+
+        // Acciones del cliente frente a una propuesta de MJ
+        window.responderReprogramacionCliente = async (idCita, acepta, nuevaFecha) => {
+            try {
+                if (acepta) {
+                    await updateDoc(doc(db, "citas", idCita), { 
+                        estado: "confirmada", 
+                        fecha: nuevaFecha 
+                    });
+                    alert("¡Genial! Tu cita ha sido confirmada con la nueva fecha.");
+                } else {
+                    await updateDoc(doc(db, "citas", idCita), { 
+                        estado: "rechazada" 
+                    });
+                }
+            } catch (err) {
+                alert("Error de conexión al responder.");
+            }
+        };
+
+        function renderListasAdmin() {
+            const listaSolicitudes = document.getElementById('lista-solicitudes');
+            const listaTodasCitas = document.getElementById('lista-todas-citas');
+            
+            if (!listaSolicitudes || !listaTodasCitas) return;
+            
+            listaSolicitudes.innerHTML = '';
+            listaTodasCitas.innerHTML = '';
+            
+            // Incluimos en "pendientes" también las reprogramadas, para que MJ sepa cuáles están a la espera de respuesta del cliente
+            const pendientes = globalCitas.filter(c => c.estado === 'pendiente' || c.estado === 'reprogramada');
+            const confirmadas = globalCitas.filter(c => c.estado === 'confirmada');
+            
+            if (pendientes.length === 0) listaSolicitudes.innerHTML = '<p class="text-xs text-gray-400">No hay solicitudes pendientes.</p>';
+            if (confirmadas.length === 0) listaTodasCitas.innerHTML = '<p class="text-xs text-gray-400">No hay citas planificadas.</p>';
+            
+            pendientes.forEach(c => {
+                const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
+                
+                if (c.estado === 'reprogramada') {
+                    // Si ya está reprogramada, mostramos un aviso y bloqueamos los botones
+                    listaSolicitudes.innerHTML += `
+                        <div class="bg-gray-50 p-3 rounded shadow border-l-4 border-blue-400 text-xs flex justify-between items-center opacity-80">
+                            <div>
+                                <p class="font-bold text-gray-800">${c.userName || 'Usuario'} <span class="text-[9px] text-blue-600">(Esperando su respuesta)</span></p>
+                                <p class="text-gray-600 line-through">${fecha} - ${hora || ''}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Pendiente normal
+                    listaSolicitudes.innerHTML += `
+                        <div class="bg-white p-3 rounded shadow border-l-4 border-orange-400 text-xs flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-gray-800">${c.userName || 'Usuario'}</p>
+                                <p class="text-gray-600">${fecha} - ${hora || ''}</p>
+                                <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
+                            </div>
+                            <div class="flex gap-1 flex-col sm:flex-row">
+                                <button onclick="window.cambiarEstadoCita('${c.id}', 'confirmada')" class="bg-green-500 text-white px-2 py-1.5 rounded shadow" title="Aceptar"><i class="fas fa-check"></i></button>
+                                <button onclick="window.abrirModalReprogramar('${c.id}', '${c.fecha}')" class="bg-blue-500 text-white px-2 py-1.5 rounded shadow" title="Reprogramar"><i class="fas fa-sync-alt"></i></button>
+                                <button onclick="window.cambiarEstadoCita('${c.id}', 'rechazada')" class="bg-red-500 text-white px-2 py-1.5 rounded shadow" title="Rechazar"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            confirmadas.forEach(c => {
+                const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
+                listaTodasCitas.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow border-l-4 border-green-500 text-xs flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-gray-800">${c.userName || 'Usuario'}</p>
+                            <p class="text-gray-600">${fecha} - ${hora || ''}</p>
+                            <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
+                        </div>
+                        <div>
+                            <button onclick="window.finalizarCita('${c.id}', '${c.userName || 'Usuario'}', '${fecha} a las ${hora || ''}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px]">Finalizar</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // ---- LÓGICA DE MODAL DE REPROGRAMACIÓN ----
+        window.abrirModalReprogramar = (id, fechaActualStr) => {
+            citaAReprogramarId = id;
+            document.getElementById('modal-reprogramar').classList.remove('hidden');
+            
+            // Intentar poner la fecha actual como valor por defecto
+            if(fechaActualStr && fechaActualStr.includes('T')) {
+                const parts = fechaActualStr.split('T');
+                document.getElementById('repo-date').value = parts[0];
+            }
+        };
+
+        window.cerrarModalReprogramar = () => {
+            citaAReprogramarId = null;
+            document.getElementById('modal-reprogramar').classList.add('hidden');
+        };
+
+        window.confirmarReprogramacion = async () => {
+            const nuevaF = document.getElementById('repo-date').value;
+            const nuevaH = document.getElementById('repo-time').value;
+            
+            if (!nuevaF || !nuevaH) {
+                alert("Por favor, selecciona fecha y hora válidas.");
+                return;
+            }
+            
+            const propuesta = `${nuevaF}T${nuevaH}`;
+            
+            try {
+                await updateDoc(doc(db, "citas", citaAReprogramarId), { 
+                    estado: "reprogramada",
+                    fechaPropuesta: propuesta
+                });
+                window.cerrarModalReprogramar();
+            } catch (err) {
+                alert("Error al reprogramar la cita.");
+            }
+        };
+        // -------------------------------------------
+
+        window.cambiarEstadoCita = async (id, nuevoEstado) => {
+            try { await updateDoc(doc(db, "citas", id), { estado: nuevoEstado }); } catch (err) { alert("Error al actualizar la cita."); }
+        };
+
+        window.finalizarCita = async (id, userName, fechaInfo) => {
+            try {
+                await addDoc(collection(db, "historial"), {
+                    userName: userName,
+                    fechaCita: fechaInfo,
+                    fechaFin: new Date().toISOString()
+                });
+                await deleteDoc(doc(db, "citas", id));
+            } catch (err) {
+                alert("Error al archivar la cita.");
+            }
+        };
+
+        window.borrarHistorial = async (id) => {
+            try { await deleteDoc(doc(db, "historial", id)); } catch (err) { alert("Error al eliminar."); }
+        };
+
+        window.seleccionarChatAdmin = (uid) => {
+            selectedChatUserId = uid;
+            if (unsubscribeAdminChat) unsubscribeAdminChat();
+            cargarChat(uid, 'chat-box-admin');
+            
+            const threadsDiv = document.getElementById('admin-chat-threads');
+            if (threadsDiv) {
+                Array.from(threadsDiv.children).forEach(btn => {
+                    if (btn.id === `thread-btn-${uid}`) {
+                        btn.classList.remove('bg-white', 'text-gray-700', 'hover:bg-gray-100');
+                        btn.classList.add('bg-ritual-gold', 'text-white');
+                    } else {
+                        btn.classList.remove('bg-ritual-gold', 'text-white');
+                        btn.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-100');
+                    }
+                });
+            }
+        };
+
+        function cargarChat(uid, contenedorId) {
+            const div = document.getElementById(contenedorId);
+            if (!div) return;
+            
+            if (contenedorId === 'chat-box-client' && unsubscribeClientChat) { unsubscribeClientChat(); unsubscribeClientChat = null; }
+            if (contenedorId === 'chat-box-admin' && unsubscribeAdminChat) { unsubscribeAdminChat(); unsubscribeAdminChat = null; }
+            
+            const q = query(collection(db, "mensajes"), where("userId", "==", uid));
+            const unsub = onSnapshot(q, (snap) => {
+                let msgs = [];
+                snap.forEach(d => { msgs.push({ id: d.id, ...d.data() }); });
+                
+                msgs.sort((a, b) => {
+                    const tA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : Date.now();
+                    const tB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : Date.now();
+                    return tA - tB;
+                });
+                
+                div.innerHTML = '';
+                if (msgs.length === 0) {
+                    div.innerHTML = '<p class="text-gray-400 text-center my-auto text-[10px]">No hay mensajes anteriores.</p>';
+                }
+                
+                const usuarioActualEsAdmin = comprobarSiEsAdmin(auth.currentUser);
+
+                msgs.forEach(m => {
+                    const esMj = m.senderId === 'admin' || (m.senderEmail && m.senderEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase());
+                    const esMio = usuarioActualEsAdmin ? esMj : !esMj;
+                    const alineacion = esMio ? 'self-end bg-ritual-dark text-white' : 'self-start bg-gray-200 text-gray-800';
+                    
+                    div.innerHTML += `
+                        <div class="max-w-[80%] p-2 rounded-lg text-[11px] ${alineacion}">
+                            <p class="font-bold text-[9px] opacity-75">${m.senderName || 'Usuario'}</p>
+                            <p>${m.texto || ''}</p>
+                        </div>
+                    `;
                 });
                 div.scrollTop = div.scrollHeight;
+                
+                const sound = document.getElementById('notif-sound');
+                if (sound && msgs.length > 0) {
+                    const lastMsg = msgs[msgs.length - 1];
+                    if (lastMsg.timestamp && typeof lastMsg.timestamp.toMillis === 'function') {
+                        if (Date.now() - lastMsg.timestamp.toMillis() < 3000) {
+                            const soundClient = (contenedorId === 'chat-box-client' && lastMsg.senderId === 'admin');
+                            const soundAdmin = (contenedorId === 'chat-box-admin' && lastMsg.senderId !== 'admin');
+                            if (soundClient || soundAdmin) sound.play().catch(() => {});
+                        }
+                    }
+                }
             });
+            
+            if (contenedorId === 'chat-box-client') unsubscribeClientChat = unsub;
+            if (contenedorId === 'chat-box-admin') unsubscribeAdminChat = unsub;
         }
 
         window.enviarMensajeCliente = async () => {
-            const t = document.getElementById('msg-client').value;
-            if(!t) return;
-            await addDoc(collection(db, "mensajes"), { chatId: currentUser.uid, emisorId: currentUser.uid, texto: t, timestamp: serverTimestamp() });
-            document.getElementById('msg-client').value = "";
+            const input = document.getElementById('msg-client');
+            const txt = input.value.trim();
+            if (!txt || !auth.currentUser) return;
+            
+            try {
+                await addDoc(collection(db, "mensajes"), {
+                    userId: auth.currentUser.uid,
+                    clientName: auth.currentUser.displayName || auth.currentUser.email,
+                    senderId: auth.currentUser.uid,
+                    senderName: auth.currentUser.displayName || 'Cliente',
+                    senderEmail: auth.currentUser.email,
+                    texto: txt,
+                    timestamp: serverTimestamp()
+                });
+                input.value = '';
+            } catch (err) {
+                alert("Error al enviar el mensaje. Verifica tu conexión.");
+            }
         };
 
         window.enviarMensajeAdmin = async () => {
-            const t = document.getElementById('msg-admin').value;
-            if(!t || !selectedChatUserId) return;
-            await addDoc(collection(db, "mensajes"), { chatId: selectedChatUserId, emisorId: currentUser.uid, texto: t, timestamp: serverTimestamp() });
-            document.getElementById('msg-admin').value = "";
+            const input = document.getElementById('msg-admin');
+            const txt = input.value.trim();
+            if (!txt || !selectedChatUserId) {
+                alert("Selecciona primero un cliente de la lista de hilos.");
+                return;
+            }
+            
+            try {
+                await addDoc(collection(db, "mensajes"), {
+                    userId: selectedChatUserId,
+                    senderId: 'admin',
+                    senderName: 'MJ (Masajes)',
+                    senderEmail: ADMIN_EMAIL,
+                    texto: txt,
+                    timestamp: serverTimestamp()
+                });
+                input.value = '';
+            } catch (err) {
+                alert("Error al enviar el mensaje. Verifica tu conexión.");
+            }
         };
-
-        function cargarListaUsuariosChat() {
-            onSnapshot(collection(db, "citas"), (snap) => {
-                const select = document.getElementById('select-chat-user');
-                const users = new Map();
-                snap.forEach(doc => { const d = doc.data(); if(d.userId) users.set(d.userId, d.userName); });
-                const currentVal = select.value;
-                select.innerHTML = '<option value="">Seleccionar cliente...</option>';
-                users.forEach((name, id) => { select.innerHTML += `<option value="${id}">${name}</option>`; });
-                select.value = currentVal;
-            });
-        }
-
-        window.cargarChatAdmin = () => {
-            selectedChatUserId = document.getElementById('select-chat-user').value;
-            if (unsubscribeAdminChat) unsubscribeAdminChat();
-            if(selectedChatUserId) unsubscribeAdminChat = cargarChat(selectedChatUserId, 'chat-box-admin');
-        };
-
     </script>
 </body>
 </html>
