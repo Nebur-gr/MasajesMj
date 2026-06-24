@@ -20,7 +20,7 @@
         }
     </script>
     <style>
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         .gold-btn { background-color: #C8A165; color: white; border-radius: 8px; font-weight: bold; }
         .profile-card { border-top: 4px solid #C8A165; }
         #chat-box-client, #chat-box-admin { scroll-behavior: smooth; }
@@ -146,6 +146,35 @@
                 </div>
             </div>
         </section>
+
+        <!-- MODAL REPROGRAMAR CITA -->
+        <div id="modal-reprogramar" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center p-4">
+            <div class="bg-white p-5 rounded-lg shadow-xl w-full max-w-sm border-t-4 border-ritual-gold relative">
+                <h3 class="font-serif text-lg mb-3">Reprogramar Cita</h3>
+                <p class="text-xs text-gray-500 mb-3">Selecciona el nuevo día y hora que le propones al cliente.</p>
+                <label class="block text-xs font-bold text-gray-500 mb-1">Nueva Fecha:</label>
+                <input type="date" id="repo-date" class="w-full p-2 border rounded mb-3 text-sm">
+                
+                <label class="block text-xs font-bold text-gray-500 mb-1">Nueva Hora:</label>
+                <select id="repo-time" class="w-full p-2 border rounded mb-4 text-sm">
+                    <option value="09:00">09:00</option>
+                    <option value="10:00">10:00</option>
+                    <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option>
+                    <option value="13:00">13:00</option>
+                    <option value="16:00">16:00</option>
+                    <option value="17:00">17:00</option>
+                    <option value="18:00">18:00</option>
+                    <option value="19:00">19:00</option>
+                    <option value="20:00">20:00</option>
+                </select>
+                
+                <div class="flex gap-2">
+                    <button onclick="window.confirmarReprogramacion()" class="flex-grow gold-btn py-2 text-sm shadow">Enviar Propuesta</button>
+                    <button onclick="window.cerrarModalReprogramar()" class="flex-grow bg-gray-200 text-gray-700 rounded py-2 text-sm font-bold shadow">Cancelar</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script type="module">
@@ -169,8 +198,8 @@
         
         let selectedChatUserId = null;
         let listenersIniciados = false;
+        let citaAReprogramarId = null; // Variable global para la reprogramación
 
-        // Variables globales de control de escuchas (Evitan fugas de memoria y bloqueos de seguridad)
         let unsubDisponibilidad = null;
         let unsubCitasAdmin = null;
         let unsubCitasClienteA = null;
@@ -224,7 +253,6 @@
             }
         };
 
-        // Función de Limpieza de Canales para evitar que datos residuales se crucen entre cuentas
         function desvincularTodosLosListeners() {
             if (unsubDisponibilidad) { unsubDisponibilidad(); unsubDisponibilidad = null; }
             if (unsubCitasAdmin) { unsubCitasAdmin(); unsubCitasAdmin = null; }
@@ -244,7 +272,7 @@
             clientSelectedDate = null;
             selectedChatUserId = null;
             signOut(auth).then(() => {
-                location.reload(); // Asegura una recarga limpia del ecosistema UI
+                location.reload(); 
             });
         };
 
@@ -287,16 +315,14 @@
         });
 
         function iniciarBaseDeDatos() {
-            desvincularTodosLosListeners(); // Limpieza inicial preventiva
+            desvincularTodosLosListeners(); 
 
-            // 1. Escucha de días inhabilitados por MJ
             unsubDisponibilidad = onSnapshot(collection(db, "disponibilidad"), (snap) => {
                 globalDisponibilidad = {};
                 snap.forEach(d => { globalDisponibilidad[d.id] = d.data().estado; });
                 actualizarCalendarios();
             });
 
-            // 2. Control de Citas Reactivas segregado por Rol de Seguridad
             if (comprobarSiEsAdmin(auth.currentUser)) {
                 unsubCitasAdmin = onSnapshot(collection(db, "citas"), (snap) => {
                     globalCitas = [];
@@ -321,7 +347,6 @@
                 unsubMensajesThreads = onSnapshot(collection(db, "mensajes"), (snap) => {
                     const threadsDiv = document.getElementById('admin-chat-threads');
                     if (!threadsDiv) return;
-                    threadsDiv.innerHTML = '';
                     
                     const clientes = {};
                     snap.forEach(d => {
@@ -329,12 +354,18 @@
                         const uid = data.userId;
                         if (uid) {
                             const msgTime = (data.timestamp && typeof data.timestamp.toMillis === 'function') ? data.timestamp.toMillis() : Date.now();
-                            if (!clientes[uid] || msgTime > clientes[uid].timestamp) {
-                                clientes[uid] = {
-                                    name: data.clientName || data.senderName || 'Cliente',
-                                    ultimoMsg: data.texto || '',
-                                    timestamp: msgTime
-                                };
+                            
+                            if (!clientes[uid]) {
+                                clientes[uid] = { name: 'Cliente', ultimoMsg: '', timestamp: 0 };
+                            }
+                            
+                            if (data.senderId !== 'admin') {
+                                clientes[uid].name = data.clientName || data.senderName || 'Cliente';
+                            }
+
+                            if (msgTime >= clientes[uid].timestamp) {
+                                clientes[uid].ultimoMsg = data.texto || '';
+                                clientes[uid].timestamp = msgTime;
                             }
                         }
                     });
@@ -347,6 +378,7 @@
                     
                     totalClientes.sort((a,b) => clientes[b].timestamp - clientes[a].timestamp);
                     
+                    threadsDiv.innerHTML = '';
                     totalClientes.forEach(uid => {
                         const c = clientes[uid];
                         const esActivo = selectedChatUserId === uid;
@@ -360,7 +392,6 @@
                     });
                 });
             } else {
-                // Modo Cliente: Carga paralela unificada para saltar bloqueos de lectura generales
                 unsubCitasClienteA = onSnapshot(query(collection(db, "citas"), where("userId", "==", auth.currentUser.uid)), (snap) => {
                     const filtradasOtros = globalCitas.filter(c => c.userId !== auth.currentUser.uid);
                     globalCitas = [...filtradasOtros];
@@ -496,7 +527,6 @@
             horasDisponibles.forEach(h => {
                 const estaOcupada = horasOcupadas.includes(h);
                 if (estaOcupada) {
-                    // Texto explícito e inequívoco para garantizar el bloqueo visual en cualquier smartphone
                     selectHora.innerHTML += `<option value="ocupado" disabled class="text-gray-300 bg-gray-100">${h} ❌ OCUPADO (Ya reservado)</option>`;
                 } else {
                     selectHora.innerHTML += `<option value="${h}">${h}</option>`;
@@ -549,22 +579,61 @@
 
             misCitas.forEach(c => {
                 let badge = '';
+                let contentExtra = '';
+
                 if (c.estado === 'pendiente') badge = '<span class="bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded font-bold">Pendiente</span>';
                 if (c.estado === 'confirmada') badge = '<span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded font-bold">Confirmada</span>';
                 if (c.estado === 'rechazada') badge = '<span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded font-bold">Rechazada</span>';
                 
+                // NUEVA LÓGICA PARA REPROGRAMACIÓN:
+                if (c.estado === 'reprogramada') {
+                    badge = '<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded font-bold shadow-sm">MJ Propone Cambio</span>';
+                    const [pFecha, pHora] = (c.fechaPropuesta || "T").split('T');
+                    contentExtra = `
+                        <div class="mt-2 bg-blue-50 p-2 rounded border border-blue-200">
+                            <p class="text-[11px] text-blue-900 mb-2">¿Te viene bien el <strong>${pFecha} a las ${pHora || ''}</strong>?</p>
+                            <div class="flex gap-2">
+                                <button onclick="window.responderReprogramacionCliente('${c.id}', true, '${c.fechaPropuesta}')" class="bg-blue-600 text-white px-2 py-1.5 rounded text-[10px] font-bold shadow-sm flex-grow">Aceptar Nueva</button>
+                                <button onclick="window.responderReprogramacionCliente('${c.id}', false, '')" class="bg-red-500 text-white px-2 py-1.5 rounded text-[10px] font-bold shadow-sm flex-grow">Rechazar</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
                 const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
                 div.innerHTML += `
-                    <div class="bg-white p-3 rounded shadow-sm border flex justify-between items-center text-xs">
-                        <div>
-                            <p class="font-bold text-gray-700">${fecha} a las ${hora || ''}</p>
-                            <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin comentarios'}</p>
+                    <div class="bg-white p-3 rounded shadow-sm border text-xs">
+                        <div class="flex justify-between items-start mb-1">
+                            <div>
+                                <p class="font-bold text-gray-700">${fecha} a las ${hora || ''}</p>
+                                <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin comentarios'}</p>
+                            </div>
+                            <div>${badge}</div>
                         </div>
-                        <div>${badge}</div>
+                        ${contentExtra}
                     </div>
                 `;
             });
         }
+
+        // Acciones del cliente frente a una propuesta de MJ
+        window.responderReprogramacionCliente = async (idCita, acepta, nuevaFecha) => {
+            try {
+                if (acepta) {
+                    await updateDoc(doc(db, "citas", idCita), { 
+                        estado: "confirmada", 
+                        fecha: nuevaFecha 
+                    });
+                    alert("¡Genial! Tu cita ha sido confirmada con la nueva fecha.");
+                } else {
+                    await updateDoc(doc(db, "citas", idCita), { 
+                        estado: "rechazada" 
+                    });
+                }
+            } catch (err) {
+                alert("Error de conexión al responder.");
+            }
+        };
 
         function renderListasAdmin() {
             const listaSolicitudes = document.getElementById('lista-solicitudes');
@@ -575,7 +644,8 @@
             listaSolicitudes.innerHTML = '';
             listaTodasCitas.innerHTML = '';
             
-            const pendientes = globalCitas.filter(c => c.estado === 'pendiente');
+            // Incluimos en "pendientes" también las reprogramadas, para que MJ sepa cuáles están a la espera de respuesta del cliente
+            const pendientes = globalCitas.filter(c => c.estado === 'pendiente' || c.estado === 'reprogramada');
             const confirmadas = globalCitas.filter(c => c.estado === 'confirmada');
             
             if (pendientes.length === 0) listaSolicitudes.innerHTML = '<p class="text-xs text-gray-400">No hay solicitudes pendientes.</p>';
@@ -583,19 +653,34 @@
             
             pendientes.forEach(c => {
                 const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
-                listaSolicitudes.innerHTML += `
-                    <div class="bg-white p-3 rounded shadow border-l-4 border-orange-400 text-xs flex justify-between items-center">
-                        <div>
-                            <p class="font-bold text-gray-800">${c.userName || 'Usuario'}</p>
-                            <p class="text-gray-600">${fecha} - ${hora || ''}</p>
-                            <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
+                
+                if (c.estado === 'reprogramada') {
+                    // Si ya está reprogramada, mostramos un aviso y bloqueamos los botones
+                    listaSolicitudes.innerHTML += `
+                        <div class="bg-gray-50 p-3 rounded shadow border-l-4 border-blue-400 text-xs flex justify-between items-center opacity-80">
+                            <div>
+                                <p class="font-bold text-gray-800">${c.userName || 'Usuario'} <span class="text-[9px] text-blue-600">(Esperando su respuesta)</span></p>
+                                <p class="text-gray-600 line-through">${fecha} - ${hora || ''}</p>
+                            </div>
                         </div>
-                        <div class="flex gap-1">
-                            <button onclick="window.cambiarEstadoCita('${c.id}', 'confirmada')" class="bg-green-500 text-white p-1.5 rounded" title="Aceptar"><i class="fas fa-check text-[10px]"></i></button>
-                            <button onclick="window.cambiarEstadoCita('${c.id}', 'rechazada')" class="bg-red-500 text-white p-1.5 rounded" title="Rechazar"><i class="fas fa-times text-[10px]"></i></button>
+                    `;
+                } else {
+                    // Pendiente normal
+                    listaSolicitudes.innerHTML += `
+                        <div class="bg-white p-3 rounded shadow border-l-4 border-orange-400 text-xs flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-gray-800">${c.userName || 'Usuario'}</p>
+                                <p class="text-gray-600">${fecha} - ${hora || ''}</p>
+                                <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
+                            </div>
+                            <div class="flex gap-1 flex-col sm:flex-row">
+                                <button onclick="window.cambiarEstadoCita('${c.id}', 'confirmada')" class="bg-green-500 text-white px-2 py-1.5 rounded shadow" title="Aceptar"><i class="fas fa-check"></i></button>
+                                <button onclick="window.abrirModalReprogramar('${c.id}', '${c.fecha}')" class="bg-blue-500 text-white px-2 py-1.5 rounded shadow" title="Reprogramar"><i class="fas fa-sync-alt"></i></button>
+                                <button onclick="window.cambiarEstadoCita('${c.id}', 'rechazada')" class="bg-red-500 text-white px-2 py-1.5 rounded shadow" title="Rechazar"><i class="fas fa-times"></i></button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             });
             
             confirmadas.forEach(c => {
@@ -614,6 +699,46 @@
                 `;
             });
         }
+
+        // ---- LÓGICA DE MODAL DE REPROGRAMACIÓN ----
+        window.abrirModalReprogramar = (id, fechaActualStr) => {
+            citaAReprogramarId = id;
+            document.getElementById('modal-reprogramar').classList.remove('hidden');
+            
+            // Intentar poner la fecha actual como valor por defecto
+            if(fechaActualStr && fechaActualStr.includes('T')) {
+                const parts = fechaActualStr.split('T');
+                document.getElementById('repo-date').value = parts[0];
+            }
+        };
+
+        window.cerrarModalReprogramar = () => {
+            citaAReprogramarId = null;
+            document.getElementById('modal-reprogramar').classList.add('hidden');
+        };
+
+        window.confirmarReprogramacion = async () => {
+            const nuevaF = document.getElementById('repo-date').value;
+            const nuevaH = document.getElementById('repo-time').value;
+            
+            if (!nuevaF || !nuevaH) {
+                alert("Por favor, selecciona fecha y hora válidas.");
+                return;
+            }
+            
+            const propuesta = `${nuevaF}T${nuevaH}`;
+            
+            try {
+                await updateDoc(doc(db, "citas", citaAReprogramarId), { 
+                    estado: "reprogramada",
+                    fechaPropuesta: propuesta
+                });
+                window.cerrarModalReprogramar();
+            } catch (err) {
+                alert("Error al reprogramar la cita.");
+            }
+        };
+        // -------------------------------------------
 
         window.cambiarEstadoCita = async (id, nuevoEstado) => {
             try { await updateDoc(doc(db, "citas", id), { estado: nuevoEstado }); } catch (err) { alert("Error al actualizar la cita."); }
@@ -641,7 +766,6 @@
             if (unsubscribeAdminChat) unsubscribeAdminChat();
             cargarChat(uid, 'chat-box-admin');
             
-            // Gestión limpia de estados activos en la barra lateral mediante selectores nativos
             const threadsDiv = document.getElementById('admin-chat-threads');
             if (threadsDiv) {
                 Array.from(threadsDiv.children).forEach(btn => {
@@ -669,8 +793,8 @@
                 snap.forEach(d => { msgs.push({ id: d.id, ...d.data() }); });
                 
                 msgs.sort((a, b) => {
-                    const tA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : 0;
-                    const tB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : 0;
+                    const tA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : Date.now();
+                    const tB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : Date.now();
                     return tA - tB;
                 });
                 
@@ -679,9 +803,13 @@
                     div.innerHTML = '<p class="text-gray-400 text-center my-auto text-[10px]">No hay mensajes anteriores.</p>';
                 }
                 
+                const usuarioActualEsAdmin = comprobarSiEsAdmin(auth.currentUser);
+
                 msgs.forEach(m => {
                     const esMj = m.senderId === 'admin' || (m.senderEmail && m.senderEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase());
-                    const alineacion = esMj ? 'self-end bg-ritual-dark text-white' : 'self-start bg-gray-200 text-gray-800';
+                    const esMio = usuarioActualEsAdmin ? esMj : !esMj;
+                    const alineacion = esMio ? 'self-end bg-ritual-dark text-white' : 'self-start bg-gray-200 text-gray-800';
+                    
                     div.innerHTML += `
                         <div class="max-w-[80%] p-2 rounded-lg text-[11px] ${alineacion}">
                             <p class="font-bold text-[9px] opacity-75">${m.senderName || 'Usuario'}</p>
@@ -691,7 +819,6 @@
                 });
                 div.scrollTop = div.scrollHeight;
                 
-                // Disparador de audio optimizado para evitar latencias de red
                 const sound = document.getElementById('notif-sound');
                 if (sound && msgs.length > 0) {
                     const lastMsg = msgs[msgs.length - 1];
@@ -714,16 +841,20 @@
             const txt = input.value.trim();
             if (!txt || !auth.currentUser) return;
             
-            await addDoc(collection(db, "mensajes"), {
-                userId: auth.currentUser.uid,
-                clientName: auth.currentUser.displayName || auth.currentUser.email,
-                senderId: auth.currentUser.uid,
-                senderName: auth.currentUser.displayName || 'Cliente',
-                senderEmail: auth.currentUser.email,
-                texto: txt,
-                timestamp: serverTimestamp()
-            });
-            input.value = '';
+            try {
+                await addDoc(collection(db, "mensajes"), {
+                    userId: auth.currentUser.uid,
+                    clientName: auth.currentUser.displayName || auth.currentUser.email,
+                    senderId: auth.currentUser.uid,
+                    senderName: auth.currentUser.displayName || 'Cliente',
+                    senderEmail: auth.currentUser.email,
+                    texto: txt,
+                    timestamp: serverTimestamp()
+                });
+                input.value = '';
+            } catch (err) {
+                alert("Error al enviar el mensaje. Verifica tu conexión.");
+            }
         };
 
         window.enviarMensajeAdmin = async () => {
@@ -734,15 +865,19 @@
                 return;
             }
             
-            await addDoc(collection(db, "mensajes"), {
-                userId: selectedChatUserId,
-                senderId: 'admin',
-                senderName: 'MJ (Masajes)',
-                senderEmail: ADMIN_EMAIL,
-                texto: txt,
-                timestamp: serverTimestamp()
-            });
-            input.value = '';
+            try {
+                await addDoc(collection(db, "mensajes"), {
+                    userId: selectedChatUserId,
+                    senderId: 'admin',
+                    senderName: 'MJ (Masajes)',
+                    senderEmail: ADMIN_EMAIL,
+                    texto: txt,
+                    timestamp: serverTimestamp()
+                });
+                input.value = '';
+            } catch (err) {
+                alert("Error al enviar el mensaje. Verifica tu conexión.");
+            }
         };
     </script>
 </body>
