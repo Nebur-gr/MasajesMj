@@ -149,7 +149,6 @@
     </main>
 
     <script type="module">
-        // Importaciones de Firebase (Se añade setDoc para el calendario admin)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -171,16 +170,14 @@
         let currentUser = null;
         let selectedChatUserId = null;
         let unsubscribeAdminChat = null;
-        let listenersIniciados = false; // Control de seguridad
+        let listenersIniciados = false;
 
-        // Estados Globales del Calendario
         let calYear = new Date().getFullYear();
         let calMonth = new Date().getMonth();
         let clientSelectedDate = null;
         let globalDisponibilidad = {};
         let globalCitas = [];
 
-        // --- ACCESO Y SEGURIDAD (Código seguro) ---
         window.login = async () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
@@ -192,9 +189,29 @@
         };
 
         window.registro = async () => {
-            const e = document.getElementById('email').value;
-            const p = document.getElementById('password').value;
-            try { await createUserWithEmailAndPassword(auth, e, p); } catch (err) { alert("Error al registrar"); }
+            const e = document.getElementById('email').value.trim();
+            const p = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+            
+            if (!e || !p) {
+                errorDiv.innerText = "Por favor, rellena todos los campos.";
+                return;
+            }
+
+            try { 
+                errorDiv.innerText = ""; 
+                await createUserWithEmailAndPassword(auth, e, p); 
+            } catch (err) { 
+                if (err.code === 'auth/email-already-in-use') {
+                    errorDiv.innerText = "Este correo ya está registrado. Intenta iniciar sesión.";
+                } else if (err.code === 'auth/weak-password') {
+                    errorDiv.innerText = "La contraseña debe tener al menos 6 caracteres.";
+                } else if (err.code === 'auth/invalid-email') {
+                    errorDiv.innerText = "El formato del correo no es válido.";
+                } else {
+                    errorDiv.innerText = "Error al registrar: " + err.message;
+                }
+            }
         };
 
         window.cerrarSesion = () => {
@@ -207,7 +224,6 @@
             if (n) { await updateProfile(auth.currentUser, { displayName: n }); location.reload(); }
         };
 
-        // --- CONTROL CENTRAL DE SESIÓN ---
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
@@ -219,7 +235,6 @@
                     document.getElementById('name-setup').classList.remove('hidden');
                 } else {
                     document.getElementById('name-setup').classList.add('hidden');
-                    // Solo iniciamos las llamadas a la Base de Datos SI el usuario está verificado
                     if (!listenersIniciados) {
                         iniciarBaseDeDatos();
                         listenersIniciados = true;
@@ -241,21 +256,19 @@
             }
         });
 
-        // --- INICIALIZAR LECTURAS DE BASE DE DATOS (Fusión de Lógicas) ---
         function iniciarBaseDeDatos() {
-            // Escuchar días libres cerrados por MJ
             onSnapshot(collection(db, "disponibilidad"), (snap) => {
                 globalDisponibilidad = {};
                 snap.forEach(d => { globalDisponibilidad[d.id] = d.data().estado; });
                 actualizarCalendarios();
             });
 
-            // Escuchar todas las citas de manera global
             onSnapshot(collection(db, "citas"), (snap) => {
                 globalCitas = [];
                 snap.forEach(d => { globalCitas.push({ id: d.id, ...d.data() }); });
                 
                 actualizarCalendarios();
+                actualizarHorasDisponibles();
                 
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     renderListasAdmin();
@@ -264,23 +277,62 @@
                 }
             });
 
-            // Escuchar Historial para el Admin
             if (currentUser.email === ADMIN_EMAIL) {
                 onSnapshot(collection(db, "historial"), (snap) => {
                     const div = document.getElementById('lista-historial');
                     div.innerHTML = snap.empty ? "Historial vacío" : "";
                     snap.forEach(d => {
                         const data = d.data();
-                        div.innerHTML += `<div class="flex justify-between border-b pb-1">
-                            <span>${data.userName} - ${new Date(data.fechaFin).toLocaleDateString()}</span>
-                            <button onclick="borrarHistorial('${d.id}')" class="text-red-400"><i class="fas fa-trash"></i></button>
+                        div.innerHTML += `<div class="flex justify-between border-b pb-1 items-center">
+                            <span>${data.userName} - ${data.fechaCita || ''}</span>
+                            <button onclick="borrarHistorial('${d.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fas fa-trash"></i></button>
                         </div>`;
+                    });
+                });
+
+                onSnapshot(collection(db, "mensajes"), (snap) => {
+                    const threadsDiv = document.getElementById('admin-chat-threads');
+                    if (!threadsDiv) return;
+                    threadsDiv.innerHTML = '';
+                    
+                    const clientes = {};
+                    snap.forEach(d => {
+                        const data = d.data();
+                        const uid = data.userId;
+                        if (uid) {
+                            if (!clientes[uid] || (data.timestamp && data.timestamp.toMillis() > clientes[uid].timestamp)) {
+                                clientes[uid] = {
+                                    name: data.clientName || 'Cliente',
+                                    ultimoMsg: data.texto || '',
+                                    timestamp: data.timestamp ? data.timestamp.toMillis() : 0
+                                };
+                            }
+                        }
+                    });
+                    
+                    const totalClientes = Object.keys(clientes);
+                    if (totalClientes.length === 0) {
+                        threadsDiv.innerHTML = '<p class="text-[10px] text-gray-400 text-center py-4">Sin mensajes</p>';
+                        return;
+                    }
+                    
+                    totalClientes.sort((a,b) => clientes[b].timestamp - clientes[a].timestamp);
+                    
+                    totalClientes.forEach(uid => {
+                        const c = clientes[uid];
+                        const esActivo = selectedChatUserId === uid;
+                        const bgClass = esActivo ? 'bg-ritual-gold text-white' : 'bg-white text-gray-700 hover:bg-gray-100';
+                        threadsDiv.innerHTML += `
+                            <button type="button" onclick="window.seleccionarChatAdmin('${uid}')" class="p-2 rounded text-left text-[11px] border shadow-sm transition truncate flex flex-col w-full ${bgClass}">
+                                <span class="font-bold truncate w-full">${c.name}</span>
+                                <span class="text-[9px] opacity-80 truncate w-full">${c.ultimoMsg}</span>
+                            </button>
+                        `;
                     });
                 });
             }
         }
 
-        // --- SISTEMA DE CALENDARIO ---
         function actualizarCalendarios() {
             if (!currentUser) return;
             if (currentUser.email === ADMIN_EMAIL) {
@@ -373,43 +425,258 @@
                 }
                 clientSelectedDate = dateStr;
                 renderCalendarUI(containerId, false);
+                actualizarHorasDisponibles();
             }
         };
 
-        // --- FUNCIONES INTERNAS COMPLETADAS (Para que la web compile sin errores) ---
-        function renderListasAdmin() {
-            console.log("Renderizando listas de administrador...");
-            // Aquí irá tu lógica para renderizar las solicitudes, citas confirmadas, etc.
+        function actualizarHorasDisponibles() {
+            if (!clientSelectedDate) return;
+            const selectHora = document.getElementById('horaSolicitud');
+            if (!selectHora) return;
+            
+            selectHora.innerHTML = '';
+            const horasDisponibles = ["09:00", "10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
+            
+            const horasOcupadas = globalCitas
+                .filter(c => c.estado === "confirmada" && c.fecha && c.fecha.startsWith(clientSelectedDate))
+                .map(c => c.fecha.split('T')[1] || '');
+                
+            horasDisponibles.forEach(h => {
+                const estaOcupada = horasOcupadas.includes(h);
+                const disabled = estaOcupada ? 'disabled style="color: #bbb; background-color: #f3f4f6;"' : '';
+                const texto = estaOcupada ? `${h} (Ocupado)` : h;
+                selectHora.innerHTML += `<option value="${h}" ${disabled}>${texto}</option>`;
+            });
         }
+
+        window.solicitarCita = async () => {
+            if (!clientSelectedDate) {
+                alert("Por favor, selecciona primero un día en el calendario.");
+                return;
+            }
+            const hora = document.getElementById('horaSolicitud').value;
+            if (!hora || hora.includes("Ocupado") || hora.includes("Selecciona")) {
+                alert("Por favor, selecciona una hora válida.");
+                return;
+            }
+            const nota = document.getElementById('notaCliente').value.trim();
+            
+            try {
+                await addDoc(collection(db, "citas"), {
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName || currentUser.email,
+                    fecha: `${clientSelectedDate}T${hora}`,
+                    nota: nota,
+                    estado: "pendiente",
+                    createdAt: serverTimestamp()
+                });
+                alert("¡Solicitud enviada con éxito! Espera la confirmación de MJ.");
+                document.getElementById('notaCliente').value = '';
+            } catch (err) {
+                alert("Error al enviar la solicitud.");
+            }
+        };
 
         function renderListasCliente() {
-            console.log("Renderizando listas del cliente...");
-            // Aquí irá tu lógica para mostrar el estado de las citas al cliente actual
+            const div = document.getElementById('lista-mis-citas');
+            if (!div) return;
+            div.innerHTML = '';
+            
+            const misCitas = globalCitas.filter(c => c.userId === currentUser.uid);
+            if (misCitas.length === 0) {
+                div.innerHTML = '<p class="text-xs text-gray-400">No tienes solicitudes creadas.</p>';
+                return;
+            }
+            
+            misCitas.sort((a,b) => b.fecha.localeCompare(a.fecha));
+
+            misCitas.forEach(c => {
+                let badge = '';
+                if (c.estado === 'pendiente') badge = '<span class="bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded font-bold">Pendiente</span>';
+                if (c.estado === 'confirmada') badge = '<span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded font-bold">Confirmada</span>';
+                if (c.estado === 'rechazada') badge = '<span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded font-bold">Rechazada</span>';
+                
+                const [fecha, hora] = c.fecha.split('T');
+                div.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow-sm border flex justify-between items-center text-xs">
+                        <div>
+                            <p class="font-bold text-gray-700">${fecha} a las ${hora || ''}</p>
+                            <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin comentarios'}</p>
+                        </div>
+                        <div>${badge}</div>
+                    </div>
+                `;
+            });
         }
+
+        function renderListasAdmin() {
+            const listaSolicitudes = document.getElementById('lista-solicitudes');
+            const listaTodasCitas = document.getElementById('lista-todas-citas');
+            
+            if (!listaSolicitudes || !listaTodasCitas) return;
+            
+            listaSolicitudes.innerHTML = '';
+            listaTodasCitas.innerHTML = '';
+            
+            const pendientes = globalCitas.filter(c => c.estado === 'pendiente');
+            const confirmadas = globalCitas.filter(c => c.estado === 'confirmada');
+            
+            if (pendientes.length === 0) listaSolicitudes.innerHTML = '<p class="text-xs text-gray-400">No hay solicitudes pendientes.</p>';
+            if (confirmadas.length === 0) listaTodasCitas.innerHTML = '<p class="text-xs text-gray-400">No hay citas planificadas.</p>';
+            
+            pendientes.forEach(c => {
+                const [fecha, hora] = c.fecha.split('T');
+                listaSolicitudes.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow border-l-4 border-orange-400 text-xs flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-gray-800">${c.userName}</p>
+                            <p class="text-gray-600">${fecha} - ${hora || ''}</p>
+                            <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="window.cambiarEstadoCita('${c.id}', 'confirmada')" class="bg-green-500 text-white p-1.5 rounded" title="Aceptar"><i class="fas fa-check text-[10px]"></i></button>
+                            <button onclick="window.cambiarEstadoCita('${c.id}', 'rechazada')" class="bg-red-500 text-white p-1.5 rounded" title="Rechazar"><i class="fas fa-times text-[10px]"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            confirmadas.forEach(c => {
+                const [fecha, hora] = c.fecha.split('T');
+                listaTodasCitas.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow border-l-4 border-green-500 text-xs flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-gray-800">${c.userName}</p>
+                            <p class="text-gray-600">${fecha} - ${hora || ''}</p>
+                            <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
+                        </div>
+                        <div>
+                            <button onclick="window.finalizarCita('${c.id}', '${c.userName}', '${fecha} a las ${hora}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px]">Finalizar</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        window.cambiarEstadoCita = async (id, nuevoEstado) => {
+            try { await updateDoc(doc(db, "citas", id), { estado: nuevoEstado }); } catch (err) { alert("Error al actualizar la cita."); }
+        };
+
+        window.finalizarCita = async (id, userName, fechaInfo) => {
+            try {
+                await addDoc(collection(db, "historial"), {
+                    userName: userName,
+                    fechaCita: fechaInfo,
+                    fechaFin: new Date().toISOString()
+                });
+                await deleteDoc(doc(db, "citas", id));
+            } catch (err) {
+                alert("Error al archivar la cita.");
+            }
+        };
+
+        window.borrarHistorial = async (id) => {
+            try { await deleteDoc(doc(db, "historial", id)); } catch (err) { alert("Error al eliminar."); }
+        };
+
+        window.seleccionarChatAdmin = (uid) => {
+            selectedChatUserId = uid;
+            if (unsubscribeAdminChat) unsubscribeAdminChat();
+            cargarChat(uid, 'chat-box-admin');
+            
+            const threadsDiv = document.getElementById('admin-chat-threads');
+            if (threadsDiv) {
+                Array.from(threadsDiv.children).forEach(btn => {
+                    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(uid)) {
+                        btn.className = btn.className.replace(/bg-white text-gray-700 hover:bg-gray-100/g, 'bg-ritual-gold text-white');
+                    } else {
+                        btn.className = btn.className.replace(/bg-ritual-gold text-white/g, 'bg-white text-gray-700 hover:bg-gray-100');
+                    }
+                });
+            }
+        };
 
         function cargarChat(uid, contenedorId) {
-            console.log(`Cargando chat para el usuario ${uid} en el contenedor ${contenedorId}`);
+            const div = document.getElementById(contenedorId);
+            if (!div) return;
+            
+            const q = query(collection(db, "mensajes"), where("userId", "==", uid));
+            const unsub = onSnapshot(q, (snap) => {
+                let msgs = [];
+                snap.forEach(d => { msgs.push({ id: d.id, ...d.data() }); });
+                
+                msgs.sort((a, b) => {
+                    const tA = a.timestamp ? a.timestamp.toMillis() : 0;
+                    const tB = b.timestamp ? b.timestamp.toMillis() : 0;
+                    return tA - tB;
+                });
+                
+                div.innerHTML = '';
+                if (msgs.length === 0) {
+                    div.innerHTML = '<p class="text-gray-400 text-center my-auto text-[10px]">No hay mensajes anteriores.</p>';
+                }
+                
+                msgs.forEach(m => {
+                    const esMj = m.senderId === 'admin' || m.senderEmail === ADMIN_EMAIL;
+                    const alineacion = esMj ? 'self-end bg-ritual-dark text-white' : 'self-start bg-gray-200 text-gray-800';
+                    div.innerHTML += `
+                        <div class="max-w-[80%] p-2 rounded-lg text-[11px] ${alineacion}">
+                            <p class="font-bold text-[9px] opacity-75">${m.senderName}</p>
+                            <p>${m.texto}</p>
+                        </div>
+                    `;
+                });
+                div.scrollTop = div.scrollHeight;
+                
+                const sound = document.getElementById('notif-sound');
+                if (sound && msgs.length > 0) {
+                    const lastMsg = msgs[msgs.length - 1];
+                    if (lastMsg.timestamp && (Date.now() - lastMsg.timestamp.toMillis() < 3000)) {
+                        const soundClient = (contenedorId === 'chat-box-client' && lastMsg.senderId === 'admin');
+                        const soundAdmin = (contenedorId === 'chat-box-admin' && lastMsg.senderId !== 'admin');
+                        if (soundClient || soundAdmin) sound.play().catch(() => {});
+                    }
+                }
+            });
+            
+            if (contenedorId === 'chat-box-admin') unsubscribeAdminChat = unsub;
         }
 
-        // --- ACCIONES DE LOS BOTONES DE LA INTERFAZ ---
-        window.solicitarCita = () => {
-            alert("Botón de solicitar cita clickeado. Añade aquí tu lógica de Firebase.");
+        window.enviarMensajeCliente = async () => {
+            const input = document.getElementById('msg-client');
+            const txt = input.value.trim();
+            if (!txt || !currentUser) return;
+            
+            await addDoc(collection(db, "mensajes"), {
+                userId: currentUser.uid,
+                clientName: currentUser.displayName || currentUser.email,
+                senderId: currentUser.uid,
+                senderName: currentUser.displayName || 'Cliente',
+                senderEmail: currentUser.email,
+                texto: txt,
+                timestamp: serverTimestamp()
+            });
+            input.value = '';
         };
 
-        window.enviarMensajeCliente = () => {
-            const msg = document.getElementById('msg-client').value;
-            console.log("Mensaje cliente enviado:", msg);
-        };
-
-        window.enviarMensajeAdmin = () => {
-            const msg = document.getElementById('msg-admin').value;
-            console.log("Mensaje admin enviado:", msg);
-        };
-
-        window.borrarHistorial = (id) => {
-            console.log("Borrando historial con ID:", id);
+        window.enviarMensajeAdmin = async () => {
+            const input = document.getElementById('msg-admin');
+            const txt = input.value.trim();
+            if (!txt || !selectedChatUserId) {
+                alert("Selecciona primero un cliente de la lista de hilos.");
+                return;
+            }
+            
+            await addDoc(collection(db, "mensajes"), {
+                userId: selectedChatUserId,
+                senderId: 'admin',
+                senderName: 'MJ (Masajes)',
+                senderEmail: ADMIN_EMAIL,
+                texto: txt,
+                timestamp: serverTimestamp()
+            });
+            input.value = '';
         };
     </script>
 </body>
 </html>
-
