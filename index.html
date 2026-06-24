@@ -178,6 +178,11 @@
         let globalDisponibilidad = {};
         let globalCitas = [];
 
+        // Función auxiliar para verificar si el usuario actual es administrador de forma segura
+        const comprobarSiEsAdmin = (user) => {
+            return user && user.email && user.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        };
+
         window.login = async () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
@@ -216,6 +221,7 @@
 
         window.cerrarSesion = () => {
             listenersIniciados = false;
+            if (unsubscribeAdminChat) unsubscribeAdminChat();
             signOut(auth);
         };
 
@@ -231,7 +237,9 @@
                 document.getElementById('btnLogout').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = user.displayName || user.email;
                 
-                if (!user.displayName && user.email !== ADMIN_EMAIL) {
+                const esAdmin = comprobarSiEsAdmin(user);
+
+                if (!user.displayName && !esAdmin) {
                     document.getElementById('name-setup').classList.remove('hidden');
                 } else {
                     document.getElementById('name-setup').classList.add('hidden');
@@ -240,11 +248,11 @@
                         listenersIniciados = true;
                     }
                     
-                    if (user.email === ADMIN_EMAIL) { 
+                    if (esAdmin) { 
                         document.getElementById('admin-panel').classList.remove('hidden');
                     } else { 
                         document.getElementById('client-panel').classList.remove('hidden');
-                        document.getElementById('client-welcome-name').innerText = user.displayName;
+                        document.getElementById('client-welcome-name').innerText = user.displayName || 'Cliente';
                         cargarChat(user.uid, 'chat-box-client');
                     }
                 }
@@ -270,26 +278,28 @@
                 actualizarCalendarios();
                 actualizarHorasDisponibles();
                 
-                if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                if (comprobarSiEsAdmin(currentUser)) {
                     renderListasAdmin();
                 } else if (currentUser) {
                     renderListasCliente();
                 }
             });
 
-            if (currentUser.email === ADMIN_EMAIL) {
+            if (comprobarSiEsAdmin(currentUser)) {
                 onSnapshot(collection(db, "historial"), (snap) => {
                     const div = document.getElementById('lista-historial');
+                    if (!div) return;
                     div.innerHTML = snap.empty ? "Historial vacío" : "";
                     snap.forEach(d => {
                         const data = d.data();
                         div.innerHTML += `<div class="flex justify-between border-b pb-1 items-center">
-                            <span>${data.userName} - ${data.fechaCita || ''}</span>
+                            <span>${data.userName || 'Usuario'} - ${data.fechaCita || ''}</span>
                             <button onclick="borrarHistorial('${d.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fas fa-trash"></i></button>
                         </div>`;
                     });
                 });
 
+                // Escucha de todos los hilos de mensajes entrantes para el administrador sin colapsar por timestamps pendientes
                 onSnapshot(collection(db, "mensajes"), (snap) => {
                     const threadsDiv = document.getElementById('admin-chat-threads');
                     if (!threadsDiv) return;
@@ -300,11 +310,13 @@
                         const data = d.data();
                         const uid = data.userId;
                         if (uid) {
-                            if (!clientes[uid] || (data.timestamp && data.timestamp.toMillis() > clientes[uid].timestamp)) {
+                            // Si el timestamp del servidor aún es null de forma local, le damos un valor temporal para evitar bloqueos de renderizado
+                            const msgTime = (data.timestamp && typeof data.timestamp.toMillis === 'function') ? data.timestamp.toMillis() : Date.now();
+                            if (!clientes[uid] || msgTime > clientes[uid].timestamp) {
                                 clientes[uid] = {
-                                    name: data.clientName || 'Cliente',
+                                    name: data.clientName || data.senderName || 'Cliente',
                                     ultimoMsg: data.texto || '',
-                                    timestamp: data.timestamp ? data.timestamp.toMillis() : 0
+                                    timestamp: msgTime
                                 };
                             }
                         }
@@ -335,7 +347,7 @@
 
         function actualizarCalendarios() {
             if (!currentUser) return;
-            if (currentUser.email === ADMIN_EMAIL) {
+            if (comprobarSiEsAdmin(currentUser)) {
                 renderCalendarUI('calendar-admin-container', true);
             } else {
                 renderCalendarUI('calendar-client-container', false);
@@ -384,8 +396,8 @@
                     const citasDia = globalCitas.filter(c => c.fecha && c.fecha.startsWith(dateStr) && c.estado === "confirmada");
                     citasDia.forEach(c => {
                         const hora = c.fecha.split('T')[1] || '';
-                        citasHtml += `<div class="text-[8px] leading-tight bg-blue-600 text-white rounded px-0.5 mt-0.5 truncate w-full text-left" title="${c.userName}">
-                            ${hora} ${c.userName.split(' ')[0]}
+                        citasHtml += `<div class="text-[8px] leading-tight bg-blue-600 text-white rounded px-0.5 mt-0.5 truncate w-full text-left" title="${c.userName || 'Cliente'}">
+                            ${hora} ${(c.userName || 'Cliente').split(' ')[0]}
                         </div>`;
                     });
                 }
@@ -488,7 +500,8 @@
                 return;
             }
             
-            misCitas.sort((a,b) => b.fecha.localeCompare(a.fecha));
+            // Protección contra citas corruptas que no tengan una propiedad "fecha" válida
+            misCitas.sort((a,b) => (b.fecha || "").localeCompare(a.fecha || ""));
 
             misCitas.forEach(c => {
                 let badge = '';
@@ -496,7 +509,7 @@
                 if (c.estado === 'confirmada') badge = '<span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded font-bold">Confirmada</span>';
                 if (c.estado === 'rechazada') badge = '<span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded font-bold">Rechazada</span>';
                 
-                const [fecha, hora] = c.fecha.split('T');
+                const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
                 div.innerHTML += `
                     <div class="bg-white p-3 rounded shadow-sm border flex justify-between items-center text-xs">
                         <div>
@@ -525,11 +538,11 @@
             if (confirmadas.length === 0) listaTodasCitas.innerHTML = '<p class="text-xs text-gray-400">No hay citas planificadas.</p>';
             
             pendientes.forEach(c => {
-                const [fecha, hora] = c.fecha.split('T');
+                const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
                 listaSolicitudes.innerHTML += `
                     <div class="bg-white p-3 rounded shadow border-l-4 border-orange-400 text-xs flex justify-between items-center">
                         <div>
-                            <p class="font-bold text-gray-800">${c.userName}</p>
+                            <p class="font-bold text-gray-800">${c.userName || 'Usuario'}</p>
                             <p class="text-gray-600">${fecha} - ${hora || ''}</p>
                             <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
                         </div>
@@ -542,16 +555,16 @@
             });
             
             confirmadas.forEach(c => {
-                const [fecha, hora] = c.fecha.split('T');
+                const [fecha, hora] = (c.fecha || "Sin fecha T ").split('T');
                 listaTodasCitas.innerHTML += `
                     <div class="bg-white p-3 rounded shadow border-l-4 border-green-500 text-xs flex justify-between items-center">
                         <div>
-                            <p class="font-bold text-gray-800">${c.userName}</p>
+                            <p class="font-bold text-gray-800">${c.userName || 'Usuario'}</p>
                             <p class="text-gray-600">${fecha} - ${hora || ''}</p>
                             <p class="text-gray-500 italic text-[11px]">${c.nota || 'Sin notas'}</p>
                         </div>
                         <div>
-                            <button onclick="window.finalizarCita('${c.id}', '${c.userName}', '${fecha} a las ${hora}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px]">Finalizar</button>
+                            <button onclick="window.finalizarCita('${c.id}', '${c.userName || 'Usuario'}', '${fecha} a las ${hora || ''}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px]">Finalizar</button>
                         </div>
                     </div>
                 `;
@@ -605,9 +618,10 @@
                 let msgs = [];
                 snap.forEach(d => { msgs.push({ id: d.id, ...d.data() }); });
                 
+                // Ordenamos controlando que los mensajes recién enviados con timestamp local 'null' no provoquen caídas fatales
                 msgs.sort((a, b) => {
-                    const tA = a.timestamp ? a.timestamp.toMillis() : 0;
-                    const tB = b.timestamp ? b.timestamp.toMillis() : 0;
+                    const tA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : Date.now();
+                    const tB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : Date.now();
                     return tA - tB;
                 });
                 
@@ -617,12 +631,12 @@
                 }
                 
                 msgs.forEach(m => {
-                    const esMj = m.senderId === 'admin' || m.senderEmail === ADMIN_EMAIL;
+                    const esMj = m.senderId === 'admin' || (m.senderEmail && m.senderEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase());
                     const alineacion = esMj ? 'self-end bg-ritual-dark text-white' : 'self-start bg-gray-200 text-gray-800';
                     div.innerHTML += `
                         <div class="max-w-[80%] p-2 rounded-lg text-[11px] ${alineacion}">
-                            <p class="font-bold text-[9px] opacity-75">${m.senderName}</p>
-                            <p>${m.texto}</p>
+                            <p class="font-bold text-[9px] opacity-75">${m.senderName || 'Usuario'}</p>
+                            <p>${m.texto || ''}</p>
                         </div>
                     `;
                 });
@@ -631,7 +645,7 @@
                 const sound = document.getElementById('notif-sound');
                 if (sound && msgs.length > 0) {
                     const lastMsg = msgs[msgs.length - 1];
-                    if (lastMsg.timestamp && (Date.now() - lastMsg.timestamp.toMillis() < 3000)) {
+                    if (lastMsg.timestamp && typeof lastMsg.timestamp.toMillis === 'function' && (Date.now() - lastMsg.timestamp.toMillis() < 3000)) {
                         const soundClient = (contenedorId === 'chat-box-client' && lastMsg.senderId === 'admin');
                         const soundAdmin = (contenedorId === 'chat-box-admin' && lastMsg.senderId !== 'admin');
                         if (soundClient || soundAdmin) sound.play().catch(() => {});
