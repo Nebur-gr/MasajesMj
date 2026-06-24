@@ -77,7 +77,7 @@
                 <div class="mb-3">
                     <label class="block text-xs font-bold text-gray-500 mb-1">Hora disponible:</label>
                     <select id="horaSolicitud" class="w-full p-2 border rounded text-sm bg-white">
-                        <option>Selecciona un día primero</option>
+                        <option value="">Selecciona un día primero</option>
                     </select>
                 </div>
 
@@ -151,7 +151,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAIqduek2X9EaRbGlojrcHvxupiU4oPQcw",
@@ -167,10 +167,18 @@
         const db = getFirestore(app);
         const ADMIN_EMAIL = "mjll5@masajesmj.com";
         
-        let currentUser = null;
         let selectedChatUserId = null;
-        let unsubscribeAdminChat = null;
         let listenersIniciados = false;
+
+        // Variables globales de control de escuchas (Evitan fugas de memoria y bloqueos de seguridad)
+        let unsubDisponibilidad = null;
+        let unsubCitasAdmin = null;
+        let unsubCitasClienteA = null;
+        let unsubCitasClienteB = null;
+        let unsubHistorial = null;
+        let unsubMensajesThreads = null;
+        let unsubscribeAdminChat = null;
+        let unsubscribeClientChat = null;
 
         let calYear = new Date().getFullYear();
         let calMonth = new Date().getMonth();
@@ -178,7 +186,6 @@
         let globalDisponibilidad = {};
         let globalCitas = [];
 
-        // Función auxiliar para verificar si el usuario actual es administrador de forma segura
         const comprobarSiEsAdmin = (user) => {
             return user && user.email && user.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
         };
@@ -208,21 +215,37 @@
                 await createUserWithEmailAndPassword(auth, e, p); 
             } catch (err) { 
                 if (err.code === 'auth/email-already-in-use') {
-                    errorDiv.innerText = "Este correo ya está registrado. Intenta iniciar sesión.";
+                    errorDiv.innerText = "Este correo ya está registrado.";
                 } else if (err.code === 'auth/weak-password') {
                     errorDiv.innerText = "La contraseña debe tener al menos 6 caracteres.";
-                } else if (err.code === 'auth/invalid-email') {
-                    errorDiv.innerText = "El formato del correo no es válido.";
                 } else {
-                    errorDiv.innerText = "Error al registrar: " + err.message;
+                    errorDiv.innerText = "Error al registrar.";
                 }
             }
         };
 
+        // Función de Limpieza de Canales para evitar que datos residuales se crucen entre cuentas
+        function desvincularTodosLosListeners() {
+            if (unsubDisponibilidad) { unsubDisponibilidad(); unsubDisponibilidad = null; }
+            if (unsubCitasAdmin) { unsubCitasAdmin(); unsubCitasAdmin = null; }
+            if (unsubCitasClienteA) { unsubCitasClienteA(); unsubCitasClienteA = null; }
+            if (unsubCitasClienteB) { unsubCitasClienteB(); unsubCitasClienteB = null; }
+            if (unsubHistorial) { unsubHistorial(); unsubHistorial = null; }
+            if (unsubMensajesThreads) { unsubMensajesThreads(); unsubMensajesThreads = null; }
+            if (unsubscribeAdminChat) { unsubscribeAdminChat(); unsubscribeAdminChat = null; }
+            if (unsubscribeClientChat) { unsubscribeClientChat(); unsubscribeClientChat = null; }
+        }
+
         window.cerrarSesion = () => {
             listenersIniciados = false;
-            if (unsubscribeAdminChat) unsubscribeAdminChat();
-            signOut(auth);
+            desvincularTodosLosListeners();
+            globalCitas = [];
+            globalDisponibilidad = {};
+            clientSelectedDate = null;
+            selectedChatUserId = null;
+            signOut(auth).then(() => {
+                location.reload(); // Asegura una recarga limpia del ecosistema UI
+            });
         };
 
         window.guardarNombrePerfil = async () => {
@@ -231,7 +254,6 @@
         };
 
         onAuthStateChanged(auth, (user) => {
-            currentUser = user;
             if (user) {
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('btnLogout').classList.remove('hidden');
@@ -265,28 +287,25 @@
         });
 
         function iniciarBaseDeDatos() {
-            onSnapshot(collection(db, "disponibilidad"), (snap) => {
+            desvincularTodosLosListeners(); // Limpieza inicial preventiva
+
+            // 1. Escucha de días inhabilitados por MJ
+            unsubDisponibilidad = onSnapshot(collection(db, "disponibilidad"), (snap) => {
                 globalDisponibilidad = {};
                 snap.forEach(d => { globalDisponibilidad[d.id] = d.data().estado; });
                 actualizarCalendarios();
             });
 
-            onSnapshot(collection(db, "citas"), (snap) => {
-                globalCitas = [];
-                snap.forEach(d => { globalCitas.push({ id: d.id, ...d.data() }); });
-                
-                actualizarCalendarios();
-                actualizarHorasDisponibles();
-                
-                if (comprobarSiEsAdmin(currentUser)) {
+            // 2. Control de Citas Reactivas segregado por Rol de Seguridad
+            if (comprobarSiEsAdmin(auth.currentUser)) {
+                unsubCitasAdmin = onSnapshot(collection(db, "citas"), (snap) => {
+                    globalCitas = [];
+                    snap.forEach(d => { globalCitas.push({ id: d.id, ...d.data() }); });
+                    actualizarCalendarios();
                     renderListasAdmin();
-                } else if (currentUser) {
-                    renderListasCliente();
-                }
-            });
+                });
 
-            if (comprobarSiEsAdmin(currentUser)) {
-                onSnapshot(collection(db, "historial"), (snap) => {
+                unsubHistorial = onSnapshot(collection(db, "historial"), (snap) => {
                     const div = document.getElementById('lista-historial');
                     if (!div) return;
                     div.innerHTML = snap.empty ? "Historial vacío" : "";
@@ -294,13 +313,12 @@
                         const data = d.data();
                         div.innerHTML += `<div class="flex justify-between border-b pb-1 items-center">
                             <span>${data.userName || 'Usuario'} - ${data.fechaCita || ''}</span>
-                            <button onclick="borrarHistorial('${d.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fas fa-trash"></i></button>
+                            <button onclick="window.borrarHistorial('${d.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fas fa-trash"></i></button>
                         </div>`;
                     });
                 });
 
-                // Escucha de todos los hilos de mensajes entrantes para el administrador sin colapsar por timestamps pendientes
-                onSnapshot(collection(db, "mensajes"), (snap) => {
+                unsubMensajesThreads = onSnapshot(collection(db, "mensajes"), (snap) => {
                     const threadsDiv = document.getElementById('admin-chat-threads');
                     if (!threadsDiv) return;
                     threadsDiv.innerHTML = '';
@@ -310,7 +328,6 @@
                         const data = d.data();
                         const uid = data.userId;
                         if (uid) {
-                            // Si el timestamp del servidor aún es null de forma local, le damos un valor temporal para evitar bloqueos de renderizado
                             const msgTime = (data.timestamp && typeof data.timestamp.toMillis === 'function') ? data.timestamp.toMillis() : Date.now();
                             if (!clientes[uid] || msgTime > clientes[uid].timestamp) {
                                 clientes[uid] = {
@@ -335,19 +352,42 @@
                         const esActivo = selectedChatUserId === uid;
                         const bgClass = esActivo ? 'bg-ritual-gold text-white' : 'bg-white text-gray-700 hover:bg-gray-100';
                         threadsDiv.innerHTML += `
-                            <button type="button" onclick="window.seleccionarChatAdmin('${uid}')" class="p-2 rounded text-left text-[11px] border shadow-sm transition truncate flex flex-col w-full ${bgClass}">
+                            <button type="button" id="thread-btn-${uid}" onclick="window.seleccionarChatAdmin('${uid}')" class="p-2 rounded text-left text-[11px] border shadow-sm transition truncate flex flex-col w-full ${bgClass}">
                                 <span class="font-bold truncate w-full">${c.name}</span>
                                 <span class="text-[9px] opacity-80 truncate w-full">${c.ultimoMsg}</span>
                             </button>
                         `;
                     });
                 });
+            } else {
+                // Modo Cliente: Carga paralela unificada para saltar bloqueos de lectura generales
+                unsubCitasClienteA = onSnapshot(query(collection(db, "citas"), where("userId", "==", auth.currentUser.uid)), (snap) => {
+                    const filtradasOtros = globalCitas.filter(c => c.userId !== auth.currentUser.uid);
+                    globalCitas = [...filtradasOtros];
+                    snap.forEach(d => { globalCitas.push({ id: d.id, ...d.data() }); });
+                    actualizarCalendarios();
+                    actualizarHorasDisponibles();
+                    renderListasCliente();
+                });
+
+                unsubCitasClienteB = onSnapshot(query(collection(db, "citas"), where("estado", "==", "confirmada")), (snap) => {
+                    const filtradasPropias = globalCitas.filter(c => c.userId === auth.currentUser.uid);
+                    globalCitas = [...filtradasPropias];
+                    snap.forEach(d => {
+                        if (!globalCitas.some(c => c.id === d.id)) {
+                            globalCitas.push({ id: d.id, ...d.data() });
+                        }
+                    });
+                    actualizarCalendarios();
+                    actualizarHorasDisponibles();
+                    renderListasCliente();
+                });
             }
         }
 
         function actualizarCalendarios() {
-            if (!currentUser) return;
-            if (comprobarSiEsAdmin(currentUser)) {
+            if (!auth.currentUser) return;
+            if (comprobarSiEsAdmin(auth.currentUser)) {
                 renderCalendarUI('calendar-admin-container', true);
             } else {
                 renderCalendarUI('calendar-client-container', false);
@@ -384,7 +424,7 @@
                 
                 let btnEstilo = "bg-green-50 text-green-800 border border-green-200";
                 if (estadoDia === "cerrado") {
-                    btnEstilo = "bg-red-50 text-red-700 border border-red-200 line-through";
+                    btnEstilo = "bg-red-50 text-red-700 border border-red-200 line-through opacity-60";
                 }
 
                 if (!isAdmin && dateStr === clientSelectedDate) {
@@ -396,7 +436,7 @@
                     const citasDia = globalCitas.filter(c => c.fecha && c.fecha.startsWith(dateStr) && c.estado === "confirmada");
                     citasDia.forEach(c => {
                         const hora = c.fecha.split('T')[1] || '';
-                        citasHtml += `<div class="text-[8px] leading-tight bg-blue-600 text-white rounded px-0.5 mt-0.5 truncate w-full text-left" title="${c.userName || 'Cliente'}">
+                        citasHtml += `<div class="text-[8px] leading-tight bg-blue-600 text-white rounded px-0.5 mt-0.5 truncate w-full text-left">
                             ${hora} ${(c.userName || 'Cliente').split(' ')[0]}
                         </div>`;
                     });
@@ -446,7 +486,7 @@
             const selectHora = document.getElementById('horaSolicitud');
             if (!selectHora) return;
             
-            selectHora.innerHTML = '';
+            selectHora.innerHTML = '<option value="">-- Elige una hora disponible --</option>';
             const horasDisponibles = ["09:00", "10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
             
             const horasOcupadas = globalCitas
@@ -455,9 +495,12 @@
                 
             horasDisponibles.forEach(h => {
                 const estaOcupada = horasOcupadas.includes(h);
-                const disabled = estaOcupada ? 'disabled style="color: #bbb; background-color: #f3f4f6;"' : '';
-                const texto = estaOcupada ? `${h} (Ocupado)` : h;
-                selectHora.innerHTML += `<option value="${h}" ${disabled}>${texto}</option>`;
+                if (estaOcupada) {
+                    // Texto explícito e inequívoco para garantizar el bloqueo visual en cualquier smartphone
+                    selectHora.innerHTML += `<option value="ocupado" disabled class="text-gray-300 bg-gray-100">${h} ❌ OCUPADO (Ya reservado)</option>`;
+                } else {
+                    selectHora.innerHTML += `<option value="${h}">${h}</option>`;
+                }
             });
         }
 
@@ -467,16 +510,16 @@
                 return;
             }
             const hora = document.getElementById('horaSolicitud').value;
-            if (!hora || hora.includes("Ocupado") || hora.includes("Selecciona")) {
-                alert("Por favor, selecciona una hora válida.");
+            if (!hora || hora === "ocupado") {
+                alert("Por favor, selecciona una hora válida y libre.");
                 return;
             }
             const nota = document.getElementById('notaCliente').value.trim();
             
             try {
                 await addDoc(collection(db, "citas"), {
-                    userId: currentUser.uid,
-                    userName: currentUser.displayName || currentUser.email,
+                    userId: auth.currentUser.uid,
+                    userName: auth.currentUser.displayName || auth.currentUser.email,
                     fecha: `${clientSelectedDate}T${hora}`,
                     nota: nota,
                     estado: "pendiente",
@@ -484,6 +527,7 @@
                 });
                 alert("¡Solicitud enviada con éxito! Espera la confirmación de MJ.");
                 document.getElementById('notaCliente').value = '';
+                document.getElementById('horaSolicitud').value = '';
             } catch (err) {
                 alert("Error al enviar la solicitud.");
             }
@@ -494,13 +538,13 @@
             if (!div) return;
             div.innerHTML = '';
             
-            const misCitas = globalCitas.filter(c => c.userId === currentUser.uid);
+            if (!auth.currentUser) return;
+            const misCitas = globalCitas.filter(c => c.userId === auth.currentUser.uid);
             if (misCitas.length === 0) {
                 div.innerHTML = '<p class="text-xs text-gray-400">No tienes solicitudes creadas.</p>';
                 return;
             }
             
-            // Protección contra citas corruptas que no tengan una propiedad "fecha" válida
             misCitas.sort((a,b) => (b.fecha || "").localeCompare(a.fecha || ""));
 
             misCitas.forEach(c => {
@@ -597,13 +641,16 @@
             if (unsubscribeAdminChat) unsubscribeAdminChat();
             cargarChat(uid, 'chat-box-admin');
             
+            // Gestión limpia de estados activos en la barra lateral mediante selectores nativos
             const threadsDiv = document.getElementById('admin-chat-threads');
             if (threadsDiv) {
                 Array.from(threadsDiv.children).forEach(btn => {
-                    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(uid)) {
-                        btn.className = btn.className.replace(/bg-white text-gray-700 hover:bg-gray-100/g, 'bg-ritual-gold text-white');
+                    if (btn.id === `thread-btn-${uid}`) {
+                        btn.classList.remove('bg-white', 'text-gray-700', 'hover:bg-gray-100');
+                        btn.classList.add('bg-ritual-gold', 'text-white');
                     } else {
-                        btn.className = btn.className.replace(/bg-ritual-gold text-white/g, 'bg-white text-gray-700 hover:bg-gray-100');
+                        btn.classList.remove('bg-ritual-gold', 'text-white');
+                        btn.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-100');
                     }
                 });
             }
@@ -613,15 +660,17 @@
             const div = document.getElementById(contenedorId);
             if (!div) return;
             
+            if (contenedorId === 'chat-box-client' && unsubscribeClientChat) { unsubscribeClientChat(); unsubscribeClientChat = null; }
+            if (contenedorId === 'chat-box-admin' && unsubscribeAdminChat) { unsubscribeAdminChat(); unsubscribeAdminChat = null; }
+            
             const q = query(collection(db, "mensajes"), where("userId", "==", uid));
             const unsub = onSnapshot(q, (snap) => {
                 let msgs = [];
                 snap.forEach(d => { msgs.push({ id: d.id, ...d.data() }); });
                 
-                // Ordenamos controlando que los mensajes recién enviados con timestamp local 'null' no provoquen caídas fatales
                 msgs.sort((a, b) => {
-                    const tA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : Date.now();
-                    const tB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : Date.now();
+                    const tA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : 0;
+                    const tB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : 0;
                     return tA - tB;
                 });
                 
@@ -642,31 +691,35 @@
                 });
                 div.scrollTop = div.scrollHeight;
                 
+                // Disparador de audio optimizado para evitar latencias de red
                 const sound = document.getElementById('notif-sound');
                 if (sound && msgs.length > 0) {
                     const lastMsg = msgs[msgs.length - 1];
-                    if (lastMsg.timestamp && typeof lastMsg.timestamp.toMillis === 'function' && (Date.now() - lastMsg.timestamp.toMillis() < 3000)) {
-                        const soundClient = (contenedorId === 'chat-box-client' && lastMsg.senderId === 'admin');
-                        const soundAdmin = (contenedorId === 'chat-box-admin' && lastMsg.senderId !== 'admin');
-                        if (soundClient || soundAdmin) sound.play().catch(() => {});
+                    if (lastMsg.timestamp && typeof lastMsg.timestamp.toMillis === 'function') {
+                        if (Date.now() - lastMsg.timestamp.toMillis() < 3000) {
+                            const soundClient = (contenedorId === 'chat-box-client' && lastMsg.senderId === 'admin');
+                            const soundAdmin = (contenedorId === 'chat-box-admin' && lastMsg.senderId !== 'admin');
+                            if (soundClient || soundAdmin) sound.play().catch(() => {});
+                        }
                     }
                 }
             });
             
+            if (contenedorId === 'chat-box-client') unsubscribeClientChat = unsub;
             if (contenedorId === 'chat-box-admin') unsubscribeAdminChat = unsub;
         }
 
         window.enviarMensajeCliente = async () => {
             const input = document.getElementById('msg-client');
             const txt = input.value.trim();
-            if (!txt || !currentUser) return;
+            if (!txt || !auth.currentUser) return;
             
             await addDoc(collection(db, "mensajes"), {
-                userId: currentUser.uid,
-                clientName: currentUser.displayName || currentUser.email,
-                senderId: currentUser.uid,
-                senderName: currentUser.displayName || 'Cliente',
-                senderEmail: currentUser.email,
+                userId: auth.currentUser.uid,
+                clientName: auth.currentUser.displayName || auth.currentUser.email,
+                senderId: auth.currentUser.uid,
+                senderName: auth.currentUser.displayName || 'Cliente',
+                senderEmail: auth.currentUser.email,
                 texto: txt,
                 timestamp: serverTimestamp()
             });
